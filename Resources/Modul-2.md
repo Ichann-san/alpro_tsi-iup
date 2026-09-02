@@ -1,571 +1,653 @@
-# Module 2 — Branching and Iteration
+# Module 2: Basic Branching and Iteration
 
-> **Course:** Algorithms and Programming  
-> **Programming language:** Python  
-> **Supported runtime:** Python 3.10 or later  
-> **Resource type:** Technical learning module  
-> **Practical notebook:** Deferred to `../Practice/Modul_1-3.ipynb`  
-> **Estimated study time:** 3–4 hours
+**Course:** Algorithms and Programming
+
+**Program:** TSI International Undergraduate Program
+
+**Programming language:** Python 3.10 or later
+
+**Prerequisite:** Module 1
+
+**Estimated study time:** 3 to 4 hours
 
 ## 1. Module scope
 
-Control flow determines which statements execute, how often they execute, and when execution leaves a region of code. This module covers Boolean evaluation, conditional branching, pattern matching, definite and condition-controlled iteration, loop invariants, termination, and control-transfer statements.
+Module 1 introduced statements that execute from top to bottom. This module introduces **control flow**: rules that select which statements execute and how many times they execute.
 
-The objective is not only to write syntactically valid loops. A correct control-flow design must make branch coverage, state transitions, boundary conditions, and termination arguments explicit.
+The core tools are:
 
-<!-- TODO(media): Add an animation of a program counter moving through sequential, conditional, and repeated control-flow paths. Include captions and descriptive alt text. Suggested path: ../Assets/Module-2/control-flow-overview.mp4 -->
+- `if`, `elif`, and `else` for decisions;
+- `for` for processing items in a collection;
+- `while` for repetition controlled by a condition;
+- `break` and `continue` for simple loop control.
+
+The examples use familiar Industrial Systems data such as daily production, quality inspection results, and targets.
+
+<!-- TODO(media): Add a beginner animation showing a program moving through sequence, one if-else decision, and one repeated loop. Use the same production-target example throughout. Suggested path: ../Assets/Module-2/control-flow-basics.mp4 -->
 
 ## 2. Learning outcomes
 
 After completing this module, a student should be able to:
 
-1. **Evaluate** Boolean expressions using precedence, short-circuiting, and Python truth-value rules.
-2. **Construct** mutually exclusive and non-exclusive conditional branches.
-3. **Trace** `for` and `while` loops by recording state before and after each iteration.
-4. **Formulate** a loop invariant and a termination argument for a simple iterative algorithm.
-5. **Use** `range()`, `enumerate()`, and `zip()` according to their contracts.
-6. **Apply** `break`, `continue`, and loop `else` without changing intended behaviour.
-7. **Diagnose** off-by-one errors, unreachable branches, non-termination, and unsafe collection mutation.
+1. construct Boolean conditions using comparison and logical operators;
+2. select one or more actions with `if`, `elif`, and `else`;
+3. use indentation to define a branch or loop body;
+4. process every item in a list with a `for` loop;
+5. generate a known sequence of integers with `range()`;
+6. construct a terminating `while` loop;
+7. apply counter and accumulator patterns;
+8. use `break` for a sentinel and `continue` for an invalid item;
+9. trace variable values across several iterations.
 
-## 3. Prerequisites and environment
+## 3. Prerequisite check
 
-Required knowledge:
+Before continuing, confirm that you can:
 
-- Python variables, expressions, and basic container operations;
-- the distinction between a value and its type; and
-- the data-structure terminology introduced in Module 1.
+- assign numeric and string values to variables;
+- calculate with `+`, `-`, `*`, and `/`;
+- compare values with operators such as `==` and `>=`;
+- create a list;
+- display variables with an f-string.
 
-All examples use the Python standard library and were designed for Python 3.10+.
+Review Module 1 if any operation is unfamiliar.
 
-## 4. Control-flow model
+### 3.1 Suggested study schedule
 
-At the statement level, execution normally proceeds in source order. A control-flow statement changes that order.
+| Activity | Time |
+| --- | ---: |
+| Conditions and basic branches | 55 minutes |
+| `for` loops and `range()` | 45 minutes |
+| `while` loops and tracing | 40 minutes |
+| `break`, `continue`, and sentinels | 25 minutes |
+| Study case, practice, and knowledge check | 45 minutes |
+| **Total** | **210 minutes** |
 
-| Construct | Decision basis | Possible effect |
-| --- | --- | --- |
-| `if` / `elif` / `else` | Truth value of expressions | Select one branch |
-| `match` / `case` | Structural pattern match | Select first matching case |
-| `for` | Items produced by an iterable | Repeat once per item |
-| `while` | Repeated truth-value test | Repeat while condition is true |
-| `break` | Explicit transfer | Exit innermost loop |
-| `continue` | Explicit transfer | Start next iteration |
-| `return` | Function result | Exit current function |
-| Exception | Exceptional transfer | Search for a matching handler |
+## 4. Sequential execution
 
-An algorithm's **control-flow graph** represents statements or basic blocks as nodes and possible transfers as directed edges. Branch coverage asks whether tests exercise each decision outcome; path coverage is stronger and may be infeasible when loops create many possible paths.
-
-## 5. Boolean evaluation
-
-### 5.1 Truth values
-
-Python permits any object in a Boolean context. The following values are false:
-
-- `False` and `None`;
-- numeric zero values;
-- empty strings and containers; and
-- instances whose type defines `__bool__()` as false or `__len__()` as zero.
-
-Other objects are normally true [2]. Use explicit comparisons when distinct states must remain distinguishable. For example, `if result:` treats `0`, `""`, `[]`, and `None` alike.
+Without a branch or loop, Python executes statements in order:
 
 ```python
-values = [0, 1, "", "data", [], [0], None]
-truth_table = [bool(value) for value in values]
+planned_units = 500
+actual_units = 475
+difference = actual_units - planned_units
 
-print(truth_table)
-assert truth_table == [False, True, False, True, False, True, False]
+print(f"Planned: {planned_units}")
+print(f"Actual: {actual_units}")
+print(f"Difference: {difference}")
 ```
 
-Expected output:
+Every line runs once. Control flow changes this fixed path.
 
-```text
-[False, True, False, True, False, True, False]
-```
+## 5. Boolean conditions
 
-### 5.2 Comparisons
-
-Comparison operators include `<`, `<=`, `>`, `>=`, `==`, `!=`, `is`, `is not`, `in`, and `not in`. Equality compares values; `is` compares identity. Use `is None` and `is not None` for the singleton `None`.
-
-Python supports comparison chaining:
+A condition is an expression that produces `True` or `False`.
 
 ```python
-temperature = 24
+actual_units = 525
+target_units = 500
 
-acceptable = 18 <= temperature <= 27
-equivalent = 18 <= temperature and temperature <= 27
-
-print(acceptable)
-assert acceptable is True
-assert acceptable == equivalent
+print(actual_units >= target_units)
+print(actual_units == target_units)
+print(actual_units < target_units)
 ```
 
-Expected output:
+Output:
 
 ```text
 True
+False
+False
 ```
 
-In a chain, the middle expression is evaluated once [3]. Chaining communicates interval membership more directly than repeating the operand.
+Logical operators combine conditions:
 
-### 5.3 Boolean operators and short-circuiting
+| Operator | Result |
+| --- | --- |
+| `and` | `True` only when both operands are true |
+| `or` | `True` when at least one operand is true |
+| `not` | Reverses a Boolean value |
 
-Precedence from higher to lower is:
+```python
+temperature = 72
+guard_closed = True
+
+temperature_ok = temperature >= 60 and temperature <= 80
+safe_to_run = temperature_ok and guard_closed
+
+assert temperature_ok is True
+assert safe_to_run is True
+```
+
+For a beginner, explicit comparisons are easier to audit than compact expressions.
+
+## 6. The basic `if` statement
+
+An `if` statement executes its indented body only when its condition is true [1].
+
+```python
+actual_units = 525
+target_units = 500
+
+if actual_units >= target_units:
+    print("Target reached")
+```
+
+The colon starts a block. The four spaces before `print()` place that statement inside the branch.
+
+If the condition is false, the body is skipped:
+
+```python
+actual_units = 480
+target_units = 500
+
+if actual_units >= target_units:
+    print("Target reached")
+
+print("Evaluation complete")
+```
+
+Output:
 
 ```text
-comparisons
-not
-and
-or
+Evaluation complete
 ```
 
-`and` returns its first false operand, or its last operand when all are true. `or` returns its first true operand, or its last operand when all are false [2]. They do not necessarily return `bool`.
+## 7. Two alternatives with `if` and `else`
+
+Use `else` when exactly one of two paths must execute:
 
 ```python
-label = ""
-display_label = label or "untitled"
+actual_units = 480
+target_units = 500
 
-records = ["A12"]
-first_record = records and records[0]
-
-print(display_label)
-print(first_record)
-
-assert display_label == "untitled"
-assert first_record == "A12"
-```
-
-Expected output:
-
-```text
-untitled
-A12
-```
-
-Short-circuiting prevents evaluation of later operands once the result is determined. It can guard an operation:
-
-```python
-denominator = 0
-safe = denominator != 0 and 100 / denominator > 2
-
-print(safe)
-assert safe is False
-```
-
-The division is not evaluated. Do not hide significant side effects inside a Boolean expression; control flow becomes harder to audit.
-
-## 6. Conditional branching
-
-### 6.1 Mutually exclusive selection
-
-An `if`–`elif`–`else` chain selects at most one suite. Conditions are tested from top to bottom, and evaluation stops at the first true condition [1].
-
-```python
-score = 78
-
-if score >= 85:
-    grade = "A"
-elif score >= 70:
-    grade = "B"
-elif score >= 55:
-    grade = "C"
+if actual_units >= target_units:
+    status = "REACHED"
 else:
-    grade = "D"
+    status = "NOT REACHED"
 
-print(grade)
-assert grade == "B"
+print(f"Target status: {status}")
+assert status == "NOT REACHED"
 ```
 
-Order is part of the algorithm. If `score >= 55` appeared first, every score of 55 or more would enter that branch and higher classifications would be unreachable.
+The `else` branch has no condition. It runs only when the corresponding `if` condition is false.
 
-### 6.2 Independent conditions
+## 8. Several alternatives with `elif`
 
-Separate `if` statements may execute multiple suites:
+Use `elif` when one value must be classified into several mutually exclusive categories:
 
 ```python
-value = 30
-properties = []
+utilization = 87
 
-if value % 2 == 0:
-    properties.append("even")
-if value % 3 == 0:
-    properties.append("divisible by 3")
-if value % 5 == 0:
-    properties.append("divisible by 5")
+if utilization >= 90:
+    category = "HIGH"
+elif utilization >= 70:
+    category = "NORMAL"
+else:
+    category = "LOW"
 
-print(properties)
-assert properties == ["even", "divisible by 3", "divisible by 5"]
+assert category == "NORMAL"
 ```
 
-Choose a chain when outcomes exclude each other. Choose independent conditions when multiple properties may hold simultaneously.
+Conditions are checked from top to bottom. The first true branch executes, and the remaining branches are skipped [1].
 
-### 6.3 Guard conditions
-
-A **guard condition** rejects invalid or exceptional states before the main operation. Inside a function, an early `return` can keep the valid path shallow. Before Module 4 introduces full function design, apply the same principle by testing prerequisites before the operation they protect.
-
-### 6.4 Conditional expressions
-
-Python's conditional expression has the form:
+Order matters. Put the most restrictive upper category first:
 
 ```text
-result_if_true if condition else result_if_false
+if score >= 80:
+    grade = "A"
+elif score >= 60:
+    grade = "B"
+else:
+    grade = "C"
 ```
 
-Use it for one small value selection, not for multi-step branching:
+If `score >= 60` appeared first, a score of `90` would incorrectly enter that broader branch.
+
+## 9. Nested decisions
+
+One decision may contain another decision:
 
 ```python
-quantity = 0
-status = "available" if quantity > 0 else "out of stock"
-assert status == "out of stock"
+machine_active = True
+defect_detected = False
+
+if machine_active:
+    if defect_detected:
+        message = "Stop and inspect"
+    else:
+        message = "Continue production"
+else:
+    message = "Machine is inactive"
+
+assert message == "Continue production"
 ```
 
-## 7. Structural pattern matching
+Use nesting only when the second condition is meaningful after the first condition succeeds. Deep nesting becomes difficult to trace.
 
-`match` compares a subject against `case` patterns. Only the first matching case executes [1]. Pattern matching is appropriate when the structure of the data determines the operation.
+## 10. Repetition with a `for` loop
+
+A `for` loop processes items from a sequence in their existing order [1].
 
 ```python
-command = ("move", 3, -1)
+daily_output = [480, 510, 495, 525]
 
-match command:
-    case ("move", x, y):
-        result = f"move by ({x}, {y})"
-    case ("stop",):
-        result = "stop"
-    case _:
-        result = "invalid command"
-
-print(result)
-assert result == "move by (3, -1)"
+for units in daily_output:
+    print(f"Recorded output: {units}")
 ```
 
-Technical distinctions:
+The loop variable `units` receives one list item per iteration:
 
-- a literal pattern tests a value;
-- a standalone name captures a value;
-- `_` is a wildcard and does not bind a name;
-- a guard such as `case value if value > 0:` adds a Boolean condition; and
-- case order matters because matching stops after the first success.
+| Iteration | `units` |
+| ---: | ---: |
+| 1 | 480 |
+| 2 | 510 |
+| 3 | 495 |
+| 4 | 525 |
 
-A broad capture pattern placed early can make later cases unreachable.
+The loop ends after the last item.
 
-<!-- TODO(media): Add an animation comparing an if–elif decision chain with first-match structural pattern matching. Show capture names and guard evaluation. Suggested path: ../Assets/Module-2/branch-selection.gif -->
+### 10.1 Counter pattern
 
-## 8. Definite iteration with `for`
-
-Python's `for` statement requests items from an iterable and assigns each item to the loop target [1]. It is item-driven rather than inherently counter-driven.
+A counter records how many times an event occurs:
 
 ```python
-readings = [4, 7, 2, 9]
+daily_output = [480, 510, 495, 525]
+target = 500
+successful_days = 0
+
+for units in daily_output:
+    if units >= target:
+        successful_days += 1
+
+assert successful_days == 2
+```
+
+Counter sequence:
+
+```text
+start at 0
+    -> condition succeeds
+    -> add 1
+    -> final count
+```
+
+### 10.2 Accumulator pattern
+
+An accumulator combines values across iterations:
+
+```python
+daily_output = [480, 510, 495, 525]
+total_output = 0
+
+for units in daily_output:
+    total_output += units
+
+assert total_output == 2010
+```
+
+`sum(daily_output)` is shorter, but the explicit loop exposes how accumulation works.
+
+## 11. Numeric repetition with `range()`
+
+`range(stop)` produces integer values from zero up to, but not including, `stop` [1].
+
+```python
+for period in range(4):
+    print(period)
+```
+
+Output:
+
+```text
+0
+1
+2
+3
+```
+
+Common forms:
+
+| Expression | Values |
+| --- | --- |
+| `range(4)` | `0, 1, 2, 3` |
+| `range(1, 5)` | `1, 2, 3, 4` |
+| `range(2, 11, 2)` | `2, 4, 6, 8, 10` |
+
+Use `range()` when the algorithm needs a controlled numeric sequence:
+
+```python
 total = 0
 
-for reading in readings:
-    total += reading
+for value in range(1, 6):
+    total += value
 
-print(total)
-assert total == 22
+assert total == 15
 ```
 
-### 8.1 State trace
+## 12. Condition-controlled repetition with `while`
 
-| Iteration | `reading` | `total` before | `total` after |
-| ---: | ---: | ---: | ---: |
-| 1 | 4 | 0 | 4 |
-| 2 | 7 | 4 | 11 |
-| 3 | 2 | 11 | 13 |
-| 4 | 9 | 13 | 22 |
-
-The trace exposes the accumulation invariant:
-
-> Before each iteration, `total` equals the sum of the items already processed.
-
-### 8.2 `range()`
-
-`range(start, stop, step)` represents an arithmetic progression. `stop` is excluded [1].
+A `while` loop repeats while its condition remains true [2]:
 
 ```python
-print(list(range(2, 9, 2)))
-print(list(range(5, 0, -2)))
+count = 1
 
-assert list(range(2, 9, 2)) == [2, 4, 6, 8]
-assert list(range(5, 0, -2)) == [5, 3, 1]
-```
-
-Expected output:
-
-```text
-[2, 4, 6, 8]
-[5, 3, 1]
-```
-
-A zero step raises `ValueError`. A step whose sign cannot approach the stop produces an empty range.
-
-### 8.3 `enumerate()` and `zip()`
-
-Use `enumerate(iterable, start=0)` when both position and item are required. Use `zip()` for lockstep iteration.
-
-```python
-codes = ["AX", "BY", "CZ"]
-weights = [2.5, 3.0, 1.5]
-rows = []
-
-for position, (code, weight) in enumerate(zip(codes, weights), start=1):
-    rows.append((position, code, weight))
-
-print(rows)
-assert rows == [(1, "AX", 2.5), (2, "BY", 3.0), (3, "CZ", 1.5)]
-```
-
-By default, `zip()` stops at the shortest input. In Python 3.10+, `zip(..., strict=True)` raises `ValueError` when lengths differ, which is useful when unequal lengths indicate corrupt data.
-
-## 9. Condition-controlled iteration with `while`
-
-A `while` loop repeats while its condition remains true. Correctness requires:
-
-1. an initialized state;
-2. a condition describing when more work remains;
-3. a body that preserves the invariant; and
-4. progress toward condition failure.
-
-```python
-value = 40
-steps = 0
-
-while value > 1:
-    value //= 2
-    steps += 1
-
-print(value, steps)
-assert (value, steps) == (1, 5)
-```
-
-### 9.1 Termination argument
-
-For the example:
-
-- variant: non-negative integer `value - 1`;
-- each iteration with `value > 1` decreases `value` through floor division by 2; and
-- the variant cannot decrease indefinitely below zero.
-
-Therefore the loop terminates for every positive initial integer.
-
-A loop may be intentionally unbounded, such as an event loop, but it still requires a documented external exit mechanism.
-
-<!-- TODO(media): Add a loop-state animation showing initialization, condition test, body, update, invariant, and decreasing variant. Suggested path: ../Assets/Module-2/while-loop-invariant.mp4 -->
-
-## 10. Loop control
-
-### 10.1 `break`
-
-`break` exits the innermost enclosing loop [1].
-
-### 10.2 `continue`
-
-`continue` skips the remainder of the current body and begins the next iteration. Ensure the skipped statements are not required for progress in a `while` loop.
-
-### 10.3 Loop `else`
-
-A loop's `else` suite executes only when the loop finishes without `break` [1].
-
-```python
-values = [14, 23, 35, 42]
-target = 23
-
-for index, value in enumerate(values):
-    if value == target:
-        found_at = index
-        break
-else:
-    found_at = -1
-
-print(found_at)
-assert found_at == 1
-```
-
-Loop `else` represents “no early success or failure occurred,” not “the loop condition was false once.”
-
-## 11. Nested iteration and cost
-
-Nested loops do not automatically imply quadratic time. Cost depends on iteration counts.
-
-```python
-pair_count = 0
-
-for left in range(4):
-    for right in range(left + 1, 4):
-        pair_count += 1
-
-print(pair_count)
-assert pair_count == 6
-```
-
-The exact count is:
-
-```text
-3 + 2 + 1 + 0 = 4(4 - 1) / 2 = 6
-```
-
-For general `n`, the count is `n(n - 1)/2`, which is `Θ(n²)`. Module 10 develops formal cost analysis.
-
-## 12. Mutation during iteration
-
-Changing the size or key set of a collection while iterating over it can skip items, duplicate work, or raise an exception. Python's tutorial recommends iterating over a copy or constructing a new collection when modification is required [1].
-
-Preferred transformation:
-
-```python
-measurements = [3, -1, 5, -2, 7]
-non_negative = []
-
-for value in measurements:
-    if value >= 0:
-        non_negative.append(value)
-
-assert non_negative == [3, 5, 7]
-```
-
-## 13. Common failure modes
-
-### 13.1 Off-by-one boundaries
-
-`range(n)` produces `0` through `n - 1`. State whether an interval is closed, open, or half-open before coding it.
-
-### 13.2 Unreachable branch
-
-Place more specific conditions before broader conditions in an exclusive chain.
-
-### 13.3 Non-terminating `while` loop
-
-Identify a variant that must move toward the stopping condition. Check every path, including `continue` paths, for progress.
-
-### 13.4 Accidental truthiness
-
-Use `value is None` when `None` has a different meaning from zero or an empty container.
-
-### 13.5 Incorrect identity comparison
-
-Use `==` for value comparison. Reserve `is` for identity, especially singleton checks.
-
-### 13.6 Misplaced loop `else`
-
-The `else` belongs to the loop whose indentation matches it. It runs when that loop completes without `break`.
-
-### 13.7 Silent truncation by `zip()`
-
-Use `strict=True` when input lengths are required to match.
-
-## 14. Guided practice
-
-### 14.1 Branch table
-
-For the grade chain in Section 6, evaluate boundary inputs `54`, `55`, `69`, `70`, `84`, and `85`.
-
-**Success criteria:** each boundary maps to exactly one expected grade, and the student identifies which comparison accepts it.
-
-### 14.2 Loop trace
-
-Trace:
-
-```python
-value = 11
-count = 0
-
-while value > 1:
-    if value % 2 == 0:
-        value //= 2
-    else:
-        value -= 1
+while count <= 4:
+    print(count)
     count += 1
 ```
 
-**Deliverable:** table of `value` and `count` before and after every iteration.
+Output:
 
-### 14.3 Search outcome
+```text
+1
+2
+3
+4
+```
 
-Modify the loop-`else` example for an absent target. Explain why `found_at` becomes `-1`.
+Trace:
 
-## 15. Independent practice
+| Condition check | `count` before body | Body runs? | `count` after body |
+| ---: | ---: | --- | ---: |
+| 1 | 1 | Yes | 2 |
+| 2 | 2 | Yes | 3 |
+| 3 | 3 | Yes | 4 |
+| 4 | 4 | Yes | 5 |
+| 5 | 5 | No | 5 |
 
-### Exercise 1 — Input classification
+The update `count += 1` moves the state toward `count > 4`. Without the update, the loop would not terminate.
 
-Write code that classifies an integer as:
+<!-- TODO(media): Add a frame-by-frame animation of the previous while loop showing condition, output, update, and exit. Suggested path: ../Assets/Module-2/while-loop-trace.gif -->
 
-- negative;
-- zero;
-- positive even; or
-- positive odd.
+## 13. Using `break`
 
-**Constraints:** outcomes must be mutually exclusive; use one `if`–`elif`–`else` chain.
+`break` exits the nearest loop immediately [1].
 
-**Success criteria:** assertions pass for `-3`, `0`, `8`, and `9`.
+A **sentinel** is a special value that indicates the end of useful input. In this example, `-1` is not a production measurement. It stops processing:
 
-### Exercise 2 — Validated accumulation
+```python
+measurements = [120, 135, 128, -1, 150]
+total = 0
 
-Given `values = [12, -4, 7, -1, 5]`, sum only non-negative values and count how many were excluded.
+for units in measurements:
+    if units == -1:
+        break
+    total += units
 
-**Expected result:** sum `24` and excluded count `2`.
+assert total == 383
+```
 
-**Constraints:** one loop; no `sum()`.
+The final value `150` is ignored because it appears after the sentinel.
 
-### Exercise 3 — Terminating digit count
+## 14. Using `continue`
 
-Use a `while` loop to count decimal digits in a non-negative integer.
+`continue` skips the rest of the current iteration and moves to the next item [1].
 
-**Required cases:** `0 -> 1`, `7 -> 1`, `4205 -> 4`.
+```python
+measurements = [120, -5, 135, 0, 128]
+valid_count = 0
 
-**Deliverable:** code, state invariant, and termination argument.
+for units in measurements:
+    if units < 0:
+        continue
+    valid_count += 1
 
-### Exercise 4 — Pair generation
+assert valid_count == 4
+```
 
-For `labels = ["A", "B", "C", "D"]`, produce each unordered pair exactly once.
+Here, negative measurements are invalid and skipped. Zero remains valid because the condition rejects only values below zero.
 
-**Expected count:** `6`.
+## 15. Choosing `for` or `while`
 
-**Success criteria:** no pair contains the same item twice, and reversed duplicates do not appear.
+Use `for` when the program should process items from a known collection or numeric range.
 
-## 16. Knowledge check
+Use `while` when repetition depends on a changing condition and the number of iterations is not known directly.
 
-1. Why can `and` or `or` return a non-Boolean object?
-2. How does an `if` chain differ from multiple independent `if` statements?
-3. What values does `range(2, 8, 2)` produce?
-4. What must decrease or otherwise progress to prove `while` termination?
-5. When does a loop `else` suite execute?
-6. Why can `zip()` hide an input-length defect?
-7. What is the difference between `==` and `is`?
-8. Does a pair of nested loops always execute `n²` iterations?
+| Situation | Suitable loop |
+| --- | --- |
+| Process every daily output in a list | `for` |
+| Print the integers from 1 through 10 | `for` with `range()` |
+| Repeat until available stock reaches zero | `while` |
+| Repeat until a valid menu choice is entered | `while` |
+
+## 16. Study case: Production Target Tracker
+
+### 16.1 Problem
+
+A supervisor receives daily production values. The value `-1` indicates that no more days should be processed.
+
+For every earlier value:
+
+- reject negative values other than `-1`;
+- classify output as `ABOVE TARGET`, `ON TARGET`, or `BELOW TARGET`;
+- count processed days;
+- count days that reached or exceeded the target;
+- calculate total accepted output.
+
+### 16.2 Implementation
+
+```python
+daily_output = [480, 500, 525, -4, 510, -1, 600]
+daily_target = 500
+
+processed_days = 0
+successful_days = 0
+total_output = 0
+
+for units in daily_output:
+    if units == -1:
+        break
+
+    if units < 0:
+        print(f"Ignored invalid value: {units}")
+        continue
+
+    processed_days += 1
+    total_output += units
+
+    if units > daily_target:
+        classification = "ABOVE TARGET"
+        successful_days += 1
+    elif units == daily_target:
+        classification = "ON TARGET"
+        successful_days += 1
+    else:
+        classification = "BELOW TARGET"
+
+    print(f"Day {processed_days}: {units} units - {classification}")
+
+print(f"Processed days: {processed_days}")
+print(f"Successful days: {successful_days}")
+print(f"Total accepted output: {total_output}")
+
+assert processed_days == 4
+assert successful_days == 3
+assert total_output == 2015
+```
+
+Output:
+
+```text
+Day 1: 480 units - BELOW TARGET
+Day 2: 500 units - ON TARGET
+Day 3: 525 units - ABOVE TARGET
+Ignored invalid value: -4
+Day 4: 510 units - ABOVE TARGET
+Processed days: 4
+Successful days: 3
+Total accepted output: 2015
+```
+
+### 16.3 State trace
+
+| Input | Action | Processed | Successful | Total |
+| ---: | --- | ---: | ---: | ---: |
+| 480 | Below target | 1 | 0 | 480 |
+| 500 | On target | 2 | 1 | 980 |
+| 525 | Above target | 3 | 2 | 1505 |
+| -4 | Continue | 3 | 2 | 1505 |
+| 510 | Above target | 4 | 3 | 2015 |
+| -1 | Break | 4 | 3 | 2015 |
+
+The trace separates input handling, state changes, and output classification.
+
+## 17. Common beginner errors
+
+### 17.1 Missing a colon
+
+```text
+if units >= target
+    print("Reached")
+```
+
+Add a colon after the condition.
+
+### 17.2 Incorrect indentation
+
+```text
+if units >= target:
+print("Reached")
+```
+
+The branch body must be indented consistently.
+
+### 17.3 Confusing assignment and comparison
+
+```text
+if units = target:
+```
+
+Use `==` to compare:
+
+```text
+if units == target:
+```
+
+### 17.4 Wrong branch order
+
+Check a narrow or higher threshold before a broader lower threshold.
+
+### 17.5 Infinite `while` loop
+
+```text
+count = 1
+while count <= 4:
+    print(count)
+```
+
+The condition remains true because `count` never changes.
+
+### 17.6 Off-by-one with `range()`
+
+`range(1, 5)` stops before `5`. It produces `1, 2, 3, 4`.
+
+## 18. Guided practice
+
+Complete the missing conditions:
+
+```text
+stock = 25
+minimum_stock = 20
+
+if __________________________:
+    message = "REORDER"
+else:
+    message = "SUFFICIENT"
+```
+
+Expected message for the given values:
+
+```text
+SUFFICIENT
+```
+
+Then complete this loop:
+
+```text
+total = 0
+
+for value in [10, 20, 30]:
+    __________________________
+```
+
+Expected final value:
+
+```text
+60
+```
+
+## 19. Independent practice
+
+### Task 1: Quality classification
+
+Given a defect percentage:
+
+- below `2` is `EXCELLENT`;
+- from `2` through `5` is `ACCEPTABLE`;
+- above `5` is `REVIEW`.
+
+Write a branch that stores the correct classification.
+
+### Task 2: Weekly target count
+
+Given a list of seven production values and one daily target, count how many days reach the target.
+
+### Task 3: Controlled countdown
+
+Use a `while` loop to print values from `5` down to `1`. After the loop, print `START`.
+
+### Task 4: Sentinel processing
+
+Process values from a list until `0` appears. Ignore negative values and add positive values to a total.
+
+## 20. Knowledge check
+
+1. What type must an `if` condition produce?
+2. When does `else` execute?
+3. Why should a high threshold normally appear before a lower threshold?
+4. Which loop is suitable for processing every item in a list?
+5. What values does `range(3)` produce?
+6. What state change makes `while count < 5` terminate?
+7. What does `break` do?
+8. What does `continue` do?
+9. What is a sentinel?
 
 <details>
-<summary>Answer key</summary>
+<summary>Answer guide</summary>
 
-1. They return one of their operands after short-circuit evaluation; truth is tested, but conversion to `bool` is not automatic.
-2. A chain selects at most one branch; independent statements may execute several suites.
-3. `2, 4, 6`; the stop value `8` is excluded.
-4. A well-founded variant must move toward its lower bound or another proven terminal state.
-5. When the loop completes without executing `break`.
-6. Default `zip()` stops when its shortest input is exhausted.
-7. `==` compares values; `is` compares object identity.
-8. No. The exact cost depends on each loop's bounds and whether iterations terminate early.
+1. A Boolean result interpreted as `True` or `False`.
+2. When the corresponding `if` and `elif` conditions are false.
+3. A broader lower threshold could capture values intended for the higher category.
+4. A `for` loop.
+5. `0, 1, 2`.
+6. `count` must change until it is at least `5`.
+7. It exits the nearest loop.
+8. It skips the rest of the current iteration.
+9. A special value that signals the end of useful input or processing.
 
 </details>
 
-## 17. Module synthesis
+## 21. Module synthesis
 
-A defensible iterative algorithm states:
+Basic control flow follows this progression:
 
 ```text
-initial state
-    -> branch or loop condition
-    -> state transition
-    -> preserved invariant
-    -> termination or explicit transfer
+condition
+    -> branch selection
+    -> repeated processing
+    -> state update
+    -> termination
 ```
 
-Use branching to select valid behaviour and iteration to repeat a state transition. Verify boundaries, control transfers, and progress independently.
+A correct loop needs both useful work and a clear end. Trace the variables that change to diagnose incorrect results or non-termination.
 
 ## References
 
-1. Python Software Foundation. “More Control Flow Tools.” *The Python Tutorial*. Accessed 31 August 2026. https://docs.python.org/3/tutorial/controlflow.html
-2. Python Software Foundation. “Built-in Types: Truth Value Testing and Boolean Operations.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/stdtypes.html#truth-value-testing
-3. Python Software Foundation. “Expressions: Comparisons and Boolean Operations.” *Python Language Reference*. Accessed 31 August 2026. https://docs.python.org/3/reference/expressions.html#comparisons
+1. Python Software Foundation. "More Control Flow Tools." *Python 3.14.7 Documentation*. Accessed 2 September 2026. https://docs.python.org/3/tutorial/controlflow.html
+2. Python Software Foundation. "An Informal Introduction to Python." *Python 3.14.7 Documentation*. Accessed 2 September 2026. https://docs.python.org/3/tutorial/introduction.html
 
 ---
 
-**Previous module:** Module 1 — Introduction to Data Structures  
-**Next module:** Module 3 — String Manipulation
+**Previous module:** Module 1: Python Fundamentals and Introduction to Data Structures
+
+**Next module:** Module 3: Basic String Manipulation

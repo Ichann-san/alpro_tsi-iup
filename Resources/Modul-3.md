@@ -1,585 +1,686 @@
-# Module 3 — String Manipulation
+# Module 3: Basic String Manipulation
 
-> **Course:** Algorithms and Programming  
-> **Programming language:** Python  
-> **Supported runtime:** Python 3.10 or later  
-> **Resource type:** Technical learning module  
-> **Practical notebook:** Deferred to `../Practice/Modul_1-3.ipynb`  
-> **Estimated study time:** 3–4 hours
+**Course:** Algorithms and Programming
+
+**Program:** TSI International Undergraduate Program
+
+**Programming language:** Python 3.10 or later
+
+**Prerequisites:** Modules 1 and 2
+
+**Estimated study time:** 3 to 4 hours
 
 ## 1. Module scope
 
-Text processing includes representation, indexing, normalization, tokenization, validation, formatting, and encoding. Python's `str` type represents immutable Unicode text; `bytes` represents binary octets. Treating those types as interchangeable is a source of corrupted data and failed comparisons.
+A **string** is Python's standard type for text. Industrial Systems programs use strings for product codes, operator names, machine labels, categories, and records read from files or keyboards.
 
-This module focuses on deterministic transformations and explicit contracts. Regular expressions are introduced for pattern-based work, but direct string operations remain preferable when the grammar is simple.
+This module covers direct operations that beginners can combine with variables, lists, branches, and loops. Unicode internals, encoded bytes, normalization standards, and regular expressions appear only as an unassessed technical preview.
 
-<!-- TODO(media): Add an animation showing Unicode text transformed through normalization, tokenization, validation, and encoding. Include code-point and byte views with descriptive alt text. Suggested path: ../Assets/Module-3/text-processing-pipeline.mp4 -->
+<!-- TODO(media): Add a visual walkthrough that transforms "  pump | 024 | line a  " into fields, validates them, and constructs "TSI-PUMP-024". Suggested path: ../Assets/Module-3/product-code-pipeline.mp4 -->
 
 ## 2. Learning outcomes
 
 After completing this module, a student should be able to:
 
-1. **Distinguish** Unicode text, code points, encoded bytes, and user-perceived characters.
-2. **Apply** indexing and slicing while respecting string immutability.
-3. **Construct** normalization pipelines using case conversion, trimming, replacement, splitting, and joining.
-4. **Format** values with f-strings and the format specification mini-language.
-5. **Encode and decode** text with an explicit character encoding and error policy.
-6. **Select** direct string methods or regular expressions from the required pattern complexity.
-7. **Diagnose** boundary errors, unintended escape processing, lossy normalization, and encoding mismatches.
+1. create and display string values;
+2. combine and repeat strings;
+3. calculate string length and access characters with indexing;
+4. extract substrings with slicing;
+5. explain string immutability;
+6. test whether text contains a substring;
+7. apply common cleaning methods;
+8. split structured text into fields and join fields into output;
+9. validate basic digit-only input;
+10. normalize a simple product record into a standard code.
 
-## 3. Prerequisites
+## 3. Prerequisite check
 
-Students should be able to:
+Before continuing, confirm that you can:
 
-- write conditional statements and loops;
-- trace sequence indexing; and
-- distinguish mutable and immutable objects at an introductory level.
+- assign values to variables;
+- use `print()` and f-strings;
+- compare values in an `if` statement;
+- process list items with a `for` loop.
 
-All examples use the standard library.
+No custom function definition is required in this module. Functions are introduced in Module 4.
 
-## 4. Text representation
+### 3.1 Suggested study schedule
 
-### 4.1 `str`
+| Activity | Time |
+| --- | ---: |
+| String creation, length, indexing, and slicing | 55 minutes |
+| Immutability and common methods | 45 minutes |
+| Splitting, joining, validation, and formatting | 45 minutes |
+| Product Code Cleaner study case | 35 minutes |
+| Practice and knowledge check | 30 minutes |
+| **Total** | **210 minutes** |
 
-Python `str` is an immutable sequence of Unicode code points [1]. Python has no separate character type: indexing a string returns another string of length one.
+## 4. Creating string values
 
-```python
-text = "Data"
-
-print(len(text))
-print(text[0], text[-1])
-print(type(text[0]).__name__)
-
-assert len(text) == 4
-assert text[0] == "D"
-assert text[-1] == "a"
-```
-
-Expected output:
-
-```text
-4
-D a
-str
-```
-
-A Unicode **code point** is not always a displayed character. Combining marks and multi-code-point emoji sequences can produce one user-perceived grapheme. Therefore, `len(text)` is not a universal measure of visible symbols.
-
-### 4.2 `bytes`
-
-`bytes` is an immutable sequence of integers from `0` through `255`. Text becomes bytes through **encoding**; bytes become text through **decoding**.
-
-```text
-Unicode text --encode(codec)--> bytes
-bytes --decode(codec)--> Unicode text
-```
-
-The codec is part of the data contract. UTF-8 is widely used, but a program must not guess an encoding when the producer defines one.
-
-### 4.3 Immutability
-
-This is invalid:
+Python represents text with `str` objects. String literals may use single or double quotation marks [1].
 
 ```python
-name = "Mira"
-# name[0] = "K"  # TypeError: 'str' object does not support item assignment
+product_name = "Hydraulic Pump"
+machine_code = 'MC-04'
+
+print(product_name)
+print(machine_code)
 ```
 
-Create a new value instead:
+Digits inside quotation marks are still text:
 
 ```python
-name = "Mira"
-renamed = "K" + name[1:]
+numeric_code = "024"
+quantity = 24
 
-print(renamed)
-assert renamed == "Kira"
-assert name == "Mira"
+assert type(numeric_code).__name__ == "str"
+assert type(quantity).__name__ == "int"
 ```
 
-## 5. Literals and escape processing
-
-Quoted literals may use single, double, or triple delimiters. Backslash introduces escapes such as `\n`, `\t`, and `\\`.
+Choose quotation marks that keep the text readable:
 
 ```python
-record = "alpha\t42\nbeta\t17"
-print(record)
-```
-
-Expected output:
-
-```text
-alpha	42
-beta	17
-```
-
-A raw string literal such as `r"\d+\.\d+"` preserves backslashes for the regular-expression parser. Raw literals still obey lexical rules: they cannot end with an odd number of backslashes.
-
-Use raw strings for most regular-expression patterns and Windows-style literal paths. Use ordinary strings when Python escape processing is intended.
-
-## 6. Indexing and slicing
-
-For a string of length `n`, valid positive indices are `0` through `n - 1`. Negative indices count from the end.
-
-The slice `text[start:stop:step]` selects positions in a half-open interval; `stop` is excluded.
-
-```python
-code = "ALGORITHM"
-
-print(code[:4])
-print(code[4:])
-print(code[::2])
-print(code[::-1])
-
-assert code[:4] == "ALGO"
-assert code[4:] == "RITHM"
-assert code[::2] == "AGRTM"
-assert code[::-1] == "MHTIROGLA"
-```
-
-Expected output:
-
-```text
-ALGO
-RITHM
-AGRTM
-MHTIROGLA
-```
-
-An invalid single index raises `IndexError`. A slice safely clips out-of-range bounds.
-
-<!-- TODO(media): Add an indexed-string animation showing positive indices, negative indices, and half-open slices over the same text. Suggested path: ../Assets/Module-3/string-slicing.gif -->
-
-## 7. Core string operations
-
-### 7.1 Concatenation and repetition
-
-- `left + right` creates concatenated text.
-- `text * n` repeats text `n` times.
-- Adjacent string literals are combined at compile time.
-
-Repeated concatenation inside a large loop may allocate many intermediate strings. Accumulate fragments and call `"".join(fragments)` when constructing text from many pieces.
-
-### 7.2 Membership and search
-
-| Requirement | Operation | Failure or absence result |
-| --- | --- | --- |
-| Substring exists | `fragment in text` | `False` |
-| First position, optional | `text.find(fragment)` | `-1` |
-| First position, required | `text.index(fragment)` | `ValueError` |
-| Number of non-overlapping matches | `text.count(fragment)` | `0` |
-| Prefix or suffix | `startswith()` / `endswith()` | `False` |
-
-Choose `index()` only when absence violates a precondition. Choose `find()` when absence is an expected outcome.
-
-### 7.3 Trimming and affix removal
-
-`strip(chars)` removes any leading or trailing characters belonging to the supplied character set. It does not remove an exact prefix.
-
-```python
-raw = "  report.csv  \n"
-clean = raw.strip()
-
-versioned = "v2-report.csv"
-without_version = versioned.removeprefix("v2-")
-
-print(clean)
-print(without_version)
-
-assert clean == "report.csv"
-assert without_version == "report.csv"
-```
-
-Failure distinction:
-
-```python
-assert "archive.tar.gz".rstrip(".gz") == "archive.tar"
-assert "archive.tar.gz".removesuffix(".gz") == "archive.tar"
-```
-
-Those results happen to match, but `rstrip(".gz")` means “remove trailing periods, g characters, or z characters repeatedly.” For exact affixes, use `removeprefix()` or `removesuffix()`.
-
-### 7.4 Replacement
-
-`text.replace(old, new, count=-1)` returns a new string. Replacements are literal, non-regex transformations.
-
-## 8. Splitting and joining
-
-### 8.1 Tokenization with `split()`
-
-With no separator, `split()` treats runs of whitespace as one delimiter and omits leading or trailing empty fields. With an explicit separator, adjacent delimiters produce empty fields.
-
-```python
-line = "  north   east  south "
-tokens = line.split()
-
-csv_like = "A,,C"
-fields = csv_like.split(",")
-
-print(tokens)
-print(fields)
-
-assert tokens == ["north", "east", "south"]
-assert fields == ["A", "", "C"]
-```
-
-Use a CSV parser for actual CSV data. Quoting, embedded newlines, and delimiter escaping exceed `split(",")` semantics.
-
-### 8.2 Construction with `join()`
-
-The separator owns `join()`:
-
-```python
-path_parts = ["courses", "algorithms", "module-3"]
-logical_path = "/".join(path_parts)
-
-print(logical_path)
-assert logical_path == "courses/algorithms/module-3"
-```
-
-Every joined item must be a string. Convert non-string values explicitly so the formatting policy remains visible.
-
-### 8.3 Lines and partitions
-
-- `splitlines()` handles several Unicode line boundaries.
-- `partition(separator)` returns `(before, separator, after)` and always returns three strings.
-- `rpartition(separator)` searches from the right.
-
-`partition()` is useful when exactly one split point is required and absence must remain observable.
-
-## 9. Case conversion and normalization
-
-### 9.1 Case
-
-`lower()` is appropriate for display transformations. `casefold()` is a stronger Unicode-aware normalization intended for caseless matching [1].
-
-```python
-left = "Straße"
-right = "STRASSE"
-
-print(left.casefold())
-assert left.casefold() == right.casefold()
-```
-
-Expected output:
-
-```text
-strasse
-```
-
-Case normalization can collapse distinct source forms. Preserve original text when auditability or display fidelity matters.
-
-### 9.2 Unicode normalization
-
-Visually similar text can have different code-point sequences. `unicodedata.normalize()` supports normalization forms including NFC and NFD [2].
-
-```python
-import unicodedata
-
-composed = "é"
-decomposed = "e\u0301"
-
-print(composed == decomposed)
-print(unicodedata.normalize("NFC", composed) ==
-      unicodedata.normalize("NFC", decomposed))
-
-assert composed != decomposed
-assert unicodedata.normalize("NFC", composed) == unicodedata.normalize("NFC", decomposed)
-```
-
-Expected output:
-
-```text
-False
-True
-```
-
-Choose a normalization form according to the system contract. Normalization is not transliteration and does not remove all visually confusing distinctions.
-
-<!-- TODO(media): Add an animation showing composed U+00E9 and decomposed U+0065 U+0301 becoming equivalent under NFC. Include code-point labels and alt text. Suggested path: ../Assets/Module-3/unicode-normalization.mp4 -->
-
-## 10. Formatting values
-
-Formatted string literals, or **f-strings**, evaluate expressions and apply optional format specifications.
-
-```python
-course = "Algorithms"
-completed = 7
-total = 12
-ratio = completed / total
-
-message = f"{course:<12} {completed:02d}/{total:02d} ({ratio:.1%})"
+message = "Operator's report"
 print(message)
-
-assert message == "Algorithms   07/12 (58.3%)"
 ```
 
-Expected output:
+## 5. String input and output
+
+`input()` always returns a string:
+
+```python
+product = input("Product name: ")
+print(f"Recorded product: {product}")
+```
+
+When numeric calculation is required, validate or convert the text before using it as a number.
+
+For fixed examples in this module, variables simulate previously entered input:
+
+```python
+raw_product = "  Hydraulic Pump  "
+print(raw_product)
+```
+
+## 6. Concatenation and repetition
+
+The `+` operator concatenates strings:
+
+```python
+department = "TSI"
+separator = "-"
+item_number = "024"
+
+code = department + separator + item_number
+assert code == "TSI-024"
+```
+
+Both operands must be strings:
 
 ```text
-Algorithms   07/12 (58.3%)
+item_number = 24
+code = "TSI-" + item_number
 ```
 
-Common fields:
+Convert the number or use an f-string:
 
-| Specification | Meaning | Example |
+```python
+item_number = 24
+
+code_a = "TSI-" + str(item_number)
+code_b = f"TSI-{item_number}"
+
+assert code_a == "TSI-24"
+assert code_b == "TSI-24"
+```
+
+The `*` operator repeats a string:
+
+```python
+line = "=" * 20
+print(line)
+```
+
+Output:
+
+```text
+====================
+```
+
+## 7. String length
+
+`len(text)` returns the number of code points in a string for the examples used here [1].
+
+```python
+machine_code = "MC-04"
+
+code_length = len(machine_code)
+assert code_length == 5
+```
+
+Spaces count as characters:
+
+```python
+label = "Line A"
+assert len(label) == 6
+```
+
+An empty string has length zero:
+
+```python
+empty_text = ""
+assert len(empty_text) == 0
+```
+
+## 8. Indexing characters
+
+String indexing starts at zero [1]:
+
+```python
+code = "PUMP"
+
+assert code[0] == "P"
+assert code[1] == "U"
+assert code[3] == "P"
+```
+
+Negative indices count from the end:
+
+```python
+code = "PUMP"
+
+assert code[-1] == "P"
+assert code[-2] == "M"
+```
+
+Index diagram:
+
+```text
+Character:  P   U   M   P
+Index:      0   1   2   3
+Negative:  -4  -3  -2  -1
+```
+
+An index outside the valid range raises `IndexError`:
+
+```text
+code = "PUMP"
+print(code[4])
+```
+
+Check the length before using a position that may not exist.
+
+## 9. Slicing substrings
+
+A slice uses `text[start:stop]`. The start position is included, and the stop position is excluded [1].
+
+```python
+batch_code = "TSI-2026-024"
+
+program = batch_code[0:3]
+year = batch_code[4:8]
+number = batch_code[9:12]
+
+assert program == "TSI"
+assert year == "2026"
+assert number == "024"
+```
+
+Useful omitted boundaries:
+
+```python
+batch_code = "TSI-2026-024"
+
+assert batch_code[:3] == "TSI"
+assert batch_code[4:] == "2026-024"
+assert batch_code[-3:] == "024"
+```
+
+<!-- TODO(media): Add an index-strip animation for "TSI-2026-024" showing zero-based indices and the half-open slices [0:3], [4:8], and [-3:]. Suggested path: ../Assets/Module-3/string-indexing.gif -->
+
+## 10. String immutability
+
+Strings are immutable. Their existing characters cannot be replaced by item assignment [2].
+
+Invalid:
+
+```text
+code = "tsi-024"
+code[0] = "T"
+```
+
+Create a new string instead:
+
+```python
+code = "tsi-024"
+corrected_code = "T" + code[1:]
+
+assert code == "tsi-024"
+assert corrected_code == "Tsi-024"
+```
+
+Most string methods also return a new string:
+
+```python
+raw_code = "  tsi-024  "
+clean_code = raw_code.strip().upper()
+
+assert raw_code == "  tsi-024  "
+assert clean_code == "TSI-024"
+```
+
+Store the returned value when the program needs the change.
+
+## 11. Membership tests
+
+The `in` operator checks whether one string occurs inside another:
+
+```python
+machine_code = "LINE-A-CUTTER"
+
+assert "CUTTER" in machine_code
+assert "WELDER" not in machine_code
+```
+
+Membership is case-sensitive:
+
+```python
+message = "Machine Active"
+
+assert "Active" in message
+assert "active" not in message
+```
+
+Normalize case first when the comparison should be case-insensitive:
+
+```python
+message = "Machine Active"
+normalized_message = message.lower()
+
+assert "active" in normalized_message
+```
+
+## 12. Common cleaning methods
+
+String methods return new strings [2].
+
+| Method | Purpose | Example result |
 | --- | --- | --- |
-| `:02d` | Decimal integer, width 2, zero-padded | `07` |
-| `:.2f` | Fixed point, two digits after decimal | `3.14` |
-| `:.1%` | Percentage, one fractional digit | `58.3%` |
-| `:<12` | Left-align in width 12 | Text field |
-| `:,` | Thousands separator | `1,000,000` |
-
-Formatting produces text; it does not change the numeric value.
-
-## 11. Encoding and decoding
+| `strip()` | Remove surrounding whitespace | `"  pump ".strip()` gives `"pump"` |
+| `lower()` | Convert cased characters to lowercase | `"Pump".lower()` gives `"pump"` |
+| `upper()` | Convert cased characters to uppercase | `"tsi".upper()` gives `"TSI"` |
+| `title()` | Apply title-style casing | `"line operator".title()` gives `"Line Operator"` |
+| `replace(a, b)` | Replace occurrences of `a` with `b` | `"A B".replace(" ", "-")` gives `"A-B"` |
 
 ```python
-text = "café"
-payload = text.encode("utf-8")
-restored = payload.decode("utf-8")
+raw_label = "  hydraulic pump  "
 
-print(payload)
-print(restored)
+clean_label = raw_label.strip()
+upper_label = clean_label.upper()
+code_label = upper_label.replace(" ", "-")
 
-assert payload == b"caf\xc3\xa9"
-assert restored == text
+assert clean_label == "hydraulic pump"
+assert upper_label == "HYDRAULIC PUMP"
+assert code_label == "HYDRAULIC-PUMP"
 ```
 
-Expected output:
+Method calls may be chained:
+
+```python
+raw_label = "  hydraulic pump  "
+code_label = raw_label.strip().upper().replace(" ", "-")
+
+assert code_label == "HYDRAULIC-PUMP"
+```
+
+For text containing repeated internal spaces, use `split()` and `join()` as shown next.
+
+## 13. Splitting and joining
+
+`split(separator)` divides one string into a list of fields [2].
+
+```python
+record = "PUMP|024|LINE A"
+fields = record.split("|")
+
+assert fields == ["PUMP", "024", "LINE A"]
+assert fields[0] == "PUMP"
+```
+
+When no separator is supplied, `split()` divides on whitespace and combines repeated whitespace:
+
+```python
+raw_name = "  ana   putri  "
+words = raw_name.split()
+
+assert words == ["ana", "putri"]
+```
+
+`separator.join(items)` combines string items:
+
+```python
+words = ["ana", "putri"]
+clean_name = " ".join(words).title()
+
+assert clean_name == "Ana Putri"
+```
+
+A common whitespace-normalization pattern is:
+
+```python
+raw_text = "  bearing   inspection   report "
+clean_text = " ".join(raw_text.split())
+
+assert clean_text == "bearing inspection report"
+```
+
+## 14. Basic validation
+
+`isdigit()` returns `True` when a non-empty string contains only digit characters as defined by Python [2].
+
+```python
+item_number = "024"
+invalid_number = "02A"
+empty_number = ""
+
+assert item_number.isdigit() is True
+assert invalid_number.isdigit() is False
+assert empty_number.isdigit() is False
+```
+
+Combine validation with a branch:
+
+```python
+quantity_text = "125"
+
+if quantity_text.isdigit():
+    quantity = int(quantity_text)
+    message = f"Accepted quantity: {quantity}"
+else:
+    message = "Invalid quantity"
+
+assert message == "Accepted quantity: 125"
+```
+
+A leading minus sign is not a digit:
+
+```python
+assert "-5".isdigit() is False
+```
+
+Use a different validation rule when signed integers are required.
+
+## 15. Formatting string output
+
+An f-string inserts expressions into a string [3]:
+
+```python
+product = "Pump"
+quantity = 24
+defect_rate = 0.0375
+
+report = f"{product}: {quantity} units, defects {defect_rate:.1%}"
+assert report == "Pump: 24 units, defects 3.8%"
+```
+
+Common format specifications:
+
+| Format | Meaning | Example |
+| --- | --- | --- |
+| `{value:.2f}` | Two digits after the decimal point | `12.50` |
+| `{value:,}` | Thousands separator | `25,000` |
+| `{value:.1%}` | Percentage with one decimal place | `3.8%` |
+| `{value:03d}` | Integer padded to width three | `024` |
+
+```python
+item_number = 24
+formatted_number = f"{item_number:03d}"
+
+assert formatted_number == "024"
+```
+
+## 16. Study case: Product Code Cleaner
+
+### 16.1 Problem
+
+A raw record contains:
 
 ```text
-b'caf\xc3\xa9'
-café
+product name | item number | production line
 ```
 
-An incorrect codec can raise `UnicodeDecodeError` or silently produce incorrect text. Error policies such as `"ignore"` and `"replace"` are lossy; use them only when data-loss behaviour is explicit.
-
-Keep text as `str` inside application logic. Encode at output boundaries and decode at input boundaries.
-
-## 12. Regular expressions
-
-A regular expression specifies a set of matching strings. Python provides matching through the `re` module [3].
-
-Use direct methods for:
-
-- exact prefixes and suffixes;
-- literal replacement;
-- one fixed delimiter; and
-- simple membership tests.
-
-Use a regex for:
-
-- character classes;
-- repeated variable-width structure;
-- optional components;
-- capture groups; and
-- validated full-string patterns.
-
-### 12.1 Validation
-
-`re.fullmatch()` requires the complete input to match:
-
-```python
-import re
-
-identifier_pattern = re.compile(r"[A-Z]{2}-\d{4}")
-
-valid = identifier_pattern.fullmatch("CS-2048") is not None
-invalid = identifier_pattern.fullmatch("CS-2048-extra") is None
-
-print(valid, invalid)
-assert valid and invalid
-```
-
-Expected output:
+The standard product code must follow:
 
 ```text
-True True
+TSI-PRODUCT-NNN
 ```
 
-Prefer raw strings for regex patterns because both Python literals and regex syntax use backslashes [3].
+Requirements:
 
-### 12.2 Extraction
+- exactly three fields;
+- surrounding whitespace removed;
+- product name converted to uppercase;
+- spaces inside the product name converted to hyphens;
+- item number contains digits only;
+- item number padded to three positions;
+- line name converted to title case.
 
-Named groups communicate field meaning:
+### 16.2 Implementation
 
 ```python
-import re
+raw_record = "  hydraulic   pump | 24 | line a  "
+fields = raw_record.split("|")
 
-match = re.fullmatch(
-    r"(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})",
-    "2026-08-31",
-)
+if len(fields) == 3:
+    product_name = "-".join(fields[0].strip().upper().split())
+    item_text = fields[1].strip()
+    line_name = " ".join(fields[2].strip().split()).title()
 
-assert match is not None
-parts = match.groupdict()
-print(parts)
-assert parts == {"year": "2026", "month": "08", "day": "31"}
+    if product_name != "" and item_text.isdigit() and line_name != "":
+        item_number = int(item_text)
+        product_code = f"TSI-{product_name}-{item_number:03d}"
+        result = f"{product_code} | {line_name}"
+    else:
+        result = "INVALID RECORD"
+else:
+    result = "INVALID RECORD"
+
+print(result)
+assert result == "TSI-HYDRAULIC-PUMP-024 | Line A"
 ```
 
-A regex can validate shape, but it does not automatically validate domain semantics. The pattern accepts `2026-99-99`; calendar validation requires additional logic or a date parser.
-
-## 13. Designing a normalization pipeline
-
-Order transformations from representation-level requirements to domain rules:
+Output:
 
 ```text
-decode bytes
-    -> Unicode normalization
-    -> boundary whitespace policy
-    -> case policy
-    -> structural validation
-    -> tokenization
-    -> domain transformation
+TSI-HYDRAULIC-PUMP-024 | Line A
 ```
 
-Each stage should state whether it is lossless. For identifiers, aggressive whitespace or punctuation removal may merge distinct values.
-
-Example:
+### 16.3 Processing several records
 
 ```python
-import unicodedata
+raw_records = [
+    "pump|7|line a",
+    "steel bracket|42|line b",
+    "invalid|A3|line c",
+]
+valid_codes = []
 
-raw_tag = "  Déjà   Vu "
-normalized = unicodedata.normalize("NFC", raw_tag)
-tokens = normalized.casefold().split()
-canonical = "-".join(tokens)
+for raw_record in raw_records:
+    fields = raw_record.split("|")
 
-print(canonical)
-assert canonical == "déjà-vu"
+    if len(fields) != 3:
+        continue
+
+    product_name = "-".join(fields[0].strip().upper().split())
+    item_text = fields[1].strip()
+
+    if product_name == "" or not item_text.isdigit():
+        continue
+
+    item_number = int(item_text)
+    valid_codes.append(f"TSI-{product_name}-{item_number:03d}")
+
+assert valid_codes == ["TSI-PUMP-007", "TSI-STEEL-BRACKET-042"]
 ```
 
-## 14. Common failure modes
+This version applies Module 2 control flow to string records.
 
-### 14.1 Confusing bytes and text
+<!-- TODO(media): Add a pipeline diagram showing split, field-count check, per-field cleanup, digit validation, conversion, and formatted output. Suggested path: ../Assets/Module-3/string-validation-pipeline.png -->
 
-`b"data" != "data"`. Decode incoming bytes before text processing.
+## 17. Optional technical preview
 
-### 14.2 Assuming visible characters equal `len()`
+This section is not assessed.
 
-Code points, combining marks, and grapheme clusters are different units.
+Python strings represent Unicode text. Visually similar text may use different code-point sequences. External files and networks store encoded bytes rather than abstract text. Regular expressions describe more complex text patterns.
 
-### 14.3 Using `strip()` for an exact prefix
+These topics matter in production systems, but they introduce additional concepts that are not required for the current exercises. They may be revisited after functions, exceptions, and testing.
 
-`strip(chars)` treats `chars` as a set. Use `removeprefix()` or `removesuffix()`.
+## 18. Common beginner errors
 
-### 14.4 Using `split(",")` as a CSV parser
+### 18.1 Missing quotation marks
 
-CSV quoting and embedded delimiters require the `csv` module or a tabular-data library.
+```text
+product = pump
+```
 
-### 14.5 Normalizing without retaining source data
+Use `"pump"` for literal text.
 
-Lossy case, whitespace, or punctuation rules may prevent later audit or correction.
+### 18.2 Combining text and numbers directly
 
-### 14.6 Regex overreach
+```text
+code = "TSI-" + 24
+```
 
-Complex nested patterns can become difficult to verify and may have poor backtracking behaviour. Use staged parsing when a grammar has nested or context-dependent structure.
+Use `str(24)` or an f-string.
 
-### 14.7 Encoding without an explicit codec
+### 18.3 Using an invalid index
 
-Default encodings vary by interface and environment. State the codec at system boundaries.
+Check `len(text)` when the string may be shorter than expected.
 
-## 15. Guided practice
+### 18.4 Expecting a method to modify the original string
 
-### 15.1 Slice trace
+```text
+name = " pump "
+name.strip()
+```
 
-For `text = "COMPUTING"`, determine:
+Store the returned value:
 
-- `text[1:5]`;
-- `text[-3:]`;
-- `text[::3]`; and
-- `text[::-1]`.
+```text
+name = name.strip()
+```
 
-**Success criteria:** every answer identifies selected indices as well as the resulting string.
+### 18.5 Using `split()` without validating field count
 
-### 15.2 Token policy
+A missing or additional separator changes the number of fields. Check `len(fields)` before indexing.
 
-Compare `" A  B ".split()` with `" A  B ".split(" ")`. Explain the empty strings in the second result.
+### 18.6 Converting before validation
 
-### 15.3 Validation boundary
+`int("A3")` raises `ValueError`. For the unsigned item-number format in this module, check `isdigit()` first.
 
-Explain why `re.search(r"\d{4}", "ID-2026-X")` and `re.fullmatch(r"\d{4}", "ID-2026-X")` answer different questions.
+## 19. Guided practice
 
-## 16. Independent practice
+Given:
 
-### Exercise 1 — Identifier canonicalization
+```python
+raw_code = "  tsi pump 15  "
+```
 
-Convert `"  Data Structures  "` to `"data-structures"`.
+Complete the transformations:
 
-**Constraints:** use `strip()`, `casefold()`, `split()`, and `join()`; do not use a regex.
+```text
+clean_code = ______________________________________
+standard_code = ___________________________________
+```
 
-### Exercise 2 — Structured code validation
+Expected value:
 
-Accept only codes with three uppercase ASCII letters, a colon, and four digits, such as `"CSE:2048"`.
+```text
+TSI-PUMP-15
+```
 
-**Required cases:** accept `"CSE:2048"`; reject `"CsE:2048"`, `"CSE-2048"`, and `"CSE:20480"`.
+Then split this record and extract the second field:
 
-**Deliverable:** compiled regex and assertions.
+```text
+record = "VALVE|031|LINE B"
+fields = ___________________________________________
+item_number = ______________________________________
+```
 
-### Exercise 3 — Word-frequency input preparation
+Expected `item_number`:
 
-Given a paragraph:
+```text
+031
+```
 
-1. normalize it with NFC;
-2. apply caseless normalization;
-3. replace `","`, `"."`, `":"`, and `";"` with spaces;
-4. split into tokens.
+## 20. Independent practice
 
-**Deliverable:** token list and a written statement of information lost by the pipeline.
+### Task 1: Operator label
 
-### Exercise 4 — Encoding contract
+Convert `"  siti   rahma  "` to `"Siti Rahma"` using `split()`, `join()`, and `title()`.
 
-Encode `"อัลกอริทึม"` as UTF-8 and restore it.
+### Task 2: Batch code inspection
 
-**Success criteria:** round-trip equality holds, payload type is `bytes`, and restored type is `str`.
+For `"TSI-2026-075"`, extract the program, year, and number using slices.
 
-## 17. Knowledge check
+### Task 3: Location normalization
 
-1. Why is `str` immutable?
-2. What does the stop index of a slice mean?
-3. How do `find()` and `index()` differ on absence?
-4. Why is `casefold()` used for caseless matching?
-5. What problem does Unicode normalization address?
-6. Why is `split(",")` insufficient for general CSV?
-7. When should `re.fullmatch()` be preferred over `re.search()`?
-8. Why must encoding be explicit at a data boundary?
+Convert inconsistent location input such as `" line   a "` to `"LINE-A"`.
+
+### Task 4: Record validation
+
+Validate `"PUMP|024"`. The record is valid only when it contains two non-empty fields and the second field contains digits only.
+
+## 21. Knowledge check
+
+1. What type represents text in Python?
+2. What is the first valid string index?
+3. Does the stop position of a slice belong to the result?
+4. Can an existing string character be replaced by index assignment?
+5. What does `strip()` remove in the default form?
+6. What does `split("|")` return?
+7. Why should field count be checked before indexing split fields?
+8. What does `isdigit()` return for an empty string?
+9. Which f-string specification formats `7` as `007`?
 
 <details>
-<summary>Answer key</summary>
+<summary>Answer guide</summary>
 
-1. Its code-point sequence cannot be modified after construction; transformations return new strings.
-2. It is the first excluded position.
-3. `find()` returns `-1`; `index()` raises `ValueError`.
-4. It applies a stronger Unicode caseless transformation than `lower()`.
-5. Equivalent text may use different code-point sequences, such as composed and decomposed forms.
-6. CSV supports quoting, escaped delimiters, and embedded newlines.
-7. When the complete input must satisfy the pattern.
-8. The same bytes can decode differently under different codecs, and invalid sequences require a defined error policy.
+1. `str`.
+2. `0`.
+3. No. The stop position is excluded.
+4. No. Strings are immutable.
+5. Surrounding whitespace.
+6. A list of substrings separated at each pipe.
+7. Missing or extra separators change the list length and may make the expected index invalid.
+8. `False`.
+9. `{value:03d}`.
 
 </details>
 
-## 18. Module synthesis
+## 22. Module synthesis
 
-Text processing is a representation pipeline, not a collection of unrelated methods:
+A basic string-processing pipeline is:
 
 ```text
-bytes boundary
-    -> decoded Unicode
-    -> explicit normalization
-    -> validated structure
-    -> domain tokens or fields
-    -> formatted or encoded output
+raw text
+    -> split into fields
+    -> validate structure
+    -> clean each field
+    -> validate content
+    -> format result
 ```
 
-Preserve source data when transformations are lossy. Choose the simplest operation whose contract matches the grammar.
+Keep the raw input separate from the cleaned result. Validate structure before indexing, and validate numeric text before conversion.
 
 ## References
 
-1. Python Software Foundation. “Text Sequence Type — `str`.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str
-2. Python Software Foundation. “`unicodedata` — Unicode Database.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/unicodedata.html
-3. Python Software Foundation. “`re` — Regular Expression Operations.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/re.html
+1. Python Software Foundation. "An Informal Introduction to Python: Text." *Python 3.14.7 Documentation*. Accessed 2 September 2026. https://docs.python.org/3/tutorial/introduction.html#text
+2. Python Software Foundation. "Text Sequence Type: `str`." *Python 3.14.7 Documentation*. Accessed 2 September 2026. https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str
+3. Python Software Foundation. "Formatted String Literals." *Python 3.14.7 Documentation*. Accessed 2 September 2026. https://docs.python.org/3/tutorial/inputoutput.html#formatted-string-literals
 
 ---
 
-**Previous module:** Module 2 — Branching and Iteration  
-**Next module:** Module 4 — Decomposition, Abstraction, and Functions
+**Previous module:** Module 2: Basic Branching and Iteration
+
+**Next module:** Module 4: Decomposition, Abstraction, and Functions
