@@ -1,566 +1,711 @@
-# Module 4 — Decomposition, Abstraction, and Functions
+# Module 4: Decomposition, Abstraction, and Functions
 
-> **Course:** Algorithms and Programming  
-> **Programming language:** Python  
-> **Supported runtime:** Python 3.10 or later  
-> **Resource type:** Technical learning module  
-> **Practical notebook:** Deferred to `../Practice/Modul_4-6.ipynb`  
-> **Estimated study time:** 3–4 hours
+**Course:** Algorithms and Programming
+
+**Program:** TSI International Undergraduate Program
+
+**Programming language:** Python 3.10 or later
+
+**Prerequisites:** Modules 1-3
+
+**Estimated study time:** 3 to 4 hours
 
 ## 1. Module scope
 
-Decomposition separates a problem into components with limited responsibilities. Abstraction exposes the behaviour a client needs while suppressing representation details. Functions are Python's primary mechanism for expressing both ideas at the procedural level.
+A function gives a name to a reusable computation. Functions allow a program to be divided into smaller responsibilities, with each part receiving input and producing a defined result.
 
-This module treats a function as a contract: accepted inputs, returned output, state effects, failure behaviour, and invariants. Syntax is secondary to interface quality.
+This module begins with the basic `def` syntax and function calls. It then develops two design ideas:
 
-<!-- TODO(media): Add an animation transforming a monolithic calculation into a call graph of cohesive functions with explicit inputs and outputs. Suggested path: ../Assets/Module-4/decomposition-call-graph.mp4 -->
+- **decomposition:** divide one large problem into smaller problems;
+- **abstraction:** use a component through its interface without depending on every implementation detail.
+
+The assessed core uses ordinary parameters, return values, local variables, and simple docstrings. Advanced parameter syntax and higher-order functions are not required.
+
+<!-- TODO(media): Add an animation that transforms one long production-cost program into four connected functions. Suggested path: ../Assets/Module-4/decomposition-flow.mp4 -->
 
 ## 2. Learning outcomes
 
 After completing this module, a student should be able to:
 
-1. **Decompose** a computational requirement into cohesive function responsibilities.
-2. **Specify** function contracts with parameters, return values, preconditions, postconditions, and exceptions.
-3. **Implement** positional, keyword, default, positional-only, and keyword-only parameters.
-4. **Trace** local, enclosing, global, and built-in name resolution.
-5. **Predict** mutation and rebinding effects when arguments reference mutable objects.
-6. **Construct** pure transformations and isolate necessary side effects.
-7. **Document and annotate** a public function without confusing type hints with runtime validation.
-8. **Diagnose** shared mutable defaults, hidden dependencies, mixed abstraction levels, and missing returns.
+1. define and call a Python function;
+2. distinguish parameters from arguments;
+3. return a value and store the returned result;
+4. distinguish `print()` output from a return value;
+5. trace local variables during a function call;
+6. divide a calculation into functions with separate responsibilities;
+7. write a simple function contract and docstring;
+8. identify basic side effects involving mutable arguments.
 
-## 3. Prerequisites
+## 3. Prerequisite check
 
-Students should be able to:
+Before continuing, confirm that you can:
 
-- use expressions, branching, and iteration;
-- manipulate strings and basic containers; and
-- state simple preconditions and invariants.
+- create variables and evaluate expressions;
+- use `if`, `elif`, and `else`;
+- process values with `for` and `while` loops;
+- create lists and manipulate strings.
 
-All examples use the standard library.
+No previous experience defining custom functions is assumed.
 
-## 4. Decomposition criteria
+### 3.1 Suggested study schedule
 
-A useful decomposition is based on responsibility and change boundaries.
+| Activity | Time |
+| --- | ---: |
+| Function syntax, calls, parameters, and returns | 55 minutes |
+| Decomposition, abstraction, and contracts | 50 minutes |
+| Scope, data flow, and side effects | 45 minutes |
+| Production Cost Calculator study case | 35 minutes |
+| Practice and knowledge check | 25 minutes |
+| **Total** | **210 minutes** |
 
-### 4.1 Cohesion
+## 4. Why functions are needed
 
-A function is **cohesive** when its statements serve one defined purpose. “Read data, calculate statistics, format a report, and save a file” contains at least four responsibilities.
-
-### 4.2 Coupling
-
-**Coupling** is dependency between components. Explicit parameters and return values expose coupling. Global state, hidden file access, and mutation of caller-owned objects conceal it.
-
-### 4.3 Information hiding
-
-A client should depend on a stable contract rather than internal steps. If a calculation changes from iteration to a closed-form formula but the inputs and result remain the same, callers should not require modification.
-
-### 4.4 Abstraction level
-
-Statements within a function should operate at a compatible level. A high-level `generate_report()` should delegate byte decoding or numeric validation rather than mix those details with report orchestration.
-
-## 5. Function contracts
-
-A technical contract records:
-
-| Element | Question |
-| --- | --- |
-| Purpose | What single result or state transition does the function provide? |
-| Parameters | What values are accepted, and what does each mean? |
-| Preconditions | What must callers establish? |
-| Return | What value and type represent success? |
-| Postconditions | What becomes true after success? |
-| Side effects | What external or caller-visible state may change? |
-| Failures | Which exceptions or sentinel values represent failure? |
-| Complexity | How does cost grow when relevant? |
-
-Example contract:
-
-```text
-mean(values)
-Precondition: values is a non-empty sequence of real numbers.
-Return: arithmetic mean as a float.
-Side effects: none.
-Failure: ValueError when values is empty.
-```
-
-## 6. Defining and calling functions
-
-`def` creates a function object and binds it to a name [1], [2].
+Consider two production calculations written without functions:
 
 ```python
-def rectangle_area(width: float, height: float) -> float:
-    """Return the area of a rectangle with non-negative dimensions."""
-    if width < 0 or height < 0:
-        raise ValueError("dimensions must be non-negative")
-    return width * height
+morning_good_units = 520 - 18
+afternoon_good_units = 490 - 12
+
+print(morning_good_units)
+print(afternoon_good_units)
+```
+
+The calculation `total units - defective units` is repeated. Repetition creates several risks:
+
+- the same rule may be written differently in different places;
+- a rule change must be applied in several locations;
+- a long program becomes difficult to inspect;
+- individual calculations cannot be tested independently.
+
+A function defines the rule once:
+
+```python
+def calculate_good_units(total_units, defective_units):
+    return total_units - defective_units
 
 
-area = rectangle_area(3.5, 2.0)
-print(area)
-assert area == 7.0
+morning_good_units = calculate_good_units(520, 18)
+afternoon_good_units = calculate_good_units(490, 12)
+
+assert morning_good_units == 502
+assert afternoon_good_units == 478
+```
+
+The function name states the purpose. Its parameters identify the required input. Its return value provides the result.
+
+## 5. Defining a function
+
+The basic structure is:
+
+```python
+def function_name(parameter_1, parameter_2):
+    statement
+    return result
+```
+
+Example:
+
+```python
+def calculate_area(length, width):
+    area = length * width
+    return area
+```
+
+Technical parts:
+
+| Part | Meaning |
+| --- | --- |
+| `def` | Starts a function definition |
+| `calculate_area` | Function name |
+| `length, width` | Parameters |
+| `:` | Ends the function header |
+| Indented statements | Function body |
+| `return area` | Sends a result to the caller |
+
+Defining a function does not execute its body. The body runs when the function is called.
+
+## 6. Calling a function
+
+A call writes the function name followed by arguments in parentheses:
+
+```python
+def calculate_area(length, width):
+    return length * width
+
+
+floor_area = calculate_area(12, 8)
+print(floor_area)
+
+assert floor_area == 96
 ```
 
 Expected output:
 
 ```text
-7.0
+96
 ```
 
-Terms:
+Execution sequence:
 
-- **parameter:** name in the function definition;
-- **argument:** expression supplied by the caller;
-- **signature:** parameter structure and return annotation;
-- **body:** statements executed by a call;
-- **return value:** object supplied to the caller by `return`.
+1. Python evaluates the arguments `12` and `8`.
+2. `length` refers to `12` and `width` refers to `8` for this call.
+3. The function body calculates `96`.
+4. `return` sends `96` to the call location.
+5. `floor_area` refers to the returned value.
 
-Falling off the end of a function returns `None` [1]. Printing and returning are different operations.
+<!-- TODO(media): Add a call-frame animation showing argument binding, local calculation, return, and assignment. Suggested path: ../Assets/Module-4/function-call-frame.gif -->
 
 ## 7. Parameters and arguments
 
-### 7.1 Positional and keyword arguments
+A **parameter** is a name in a function definition. An **argument** is a value or expression supplied in a function call.
 
 ```python
-def scale(value, factor=1.0):
-    return value * factor
+def calculate_utilization(actual_output, maximum_output):
+    return actual_output / maximum_output * 100
 
 
-assert scale(8, 0.5) == 4.0
-assert scale(value=8, factor=0.5) == 4.0
-assert scale(8) == 8.0
+utilization = calculate_utilization(450, 500)
+assert utilization == 90.0
 ```
 
-Keyword calls document meaning and reduce mistakes when several adjacent parameters have the same type.
+In this example:
 
-### 7.2 Positional-only and keyword-only parameters
+- `actual_output` and `maximum_output` are parameters;
+- `450` and `500` are arguments;
+- `90.0` is the returned value.
 
-The markers `/` and `*` constrain the call interface [1]:
+Python normally matches arguments to parameters by position:
 
 ```python
-def clamp(value, /, *, minimum=0, maximum=100):
-    if minimum > maximum:
-        raise ValueError("minimum cannot exceed maximum")
-    return min(max(value, minimum), maximum)
+def calculate_difference(actual, target):
+    return actual - target
 
 
-assert clamp(120, maximum=90) == 90
-assert clamp(-4, minimum=1) == 1
+assert calculate_difference(520, 500) == 20
+assert calculate_difference(500, 520) == -20
 ```
 
-- parameters before `/` are positional-only;
-- parameters after `*` are keyword-only; and
-- parameters between them may be passed either way.
+Changing argument order changes the calculation.
 
-Keyword-only parameters are useful when several configuration values would be ambiguous by position.
+### 7.1 Keyword arguments
 
-### 7.3 Variable-length arguments
-
-- `*args` collects extra positional arguments into a tuple.
-- `**kwargs` collects extra keyword arguments into a dictionary.
-
-Use them when the interface is genuinely variadic, not to avoid designing named parameters.
-
-## 8. Return design
-
-### 8.1 Return values rather than display
+Parameter names can also be written in the call:
 
 ```python
-def summarize(values):
-    return min(values), max(values), sum(values)
-
-
-minimum, maximum, total = summarize([4, 1, 7])
-print(minimum, maximum, total)
-
-assert (minimum, maximum, total) == (1, 7, 12)
+difference = calculate_difference(actual=520, target=500)
+assert difference == 20
 ```
 
-Returning data allows testing, composition, alternate formatting, and reuse. Output functions may print at the application boundary.
+Keyword arguments are useful when adjacent numeric values have different meanings.
 
-### 8.2 One logical return shape
+## 8. Returning values
 
-Avoid returning a number on one branch and a string error message on another. Prefer:
-
-- one stable result type;
-- a documented optional result such as `int | None`; or
-- an exception for a failed precondition or operation.
-
-### 8.3 Multiple values
-
-`return first, second` returns one tuple containing two references. Tuple unpacking at the call site is assignment syntax, not multiple independent return channels.
-
-## 9. Name resolution and scope
-
-Python resolves an ordinary name through:
-
-```text
-Local -> Enclosing -> Global -> Built-in
-```
-
-This is commonly called the LEGB rule.
+`return` ends the current function call and supplies a value to the caller.
 
 ```python
-tax_rate = 0.11
+def classify_output(actual, target):
+    if actual >= target:
+        return "TARGET MET"
+    return "BELOW TARGET"
 
 
-def total_with_tax(subtotal):
-    tax_rate = 0.10
-    return subtotal * (1 + tax_rate)
-
-
-result = total_with_tax(200)
-print(result)
-
-assert result == 220.00000000000003
-assert tax_rate == 0.11
+status = classify_output(515, 500)
+assert status == "TARGET MET"
 ```
 
-Assignment inside the function binds a local name unless declared `global` or `nonlocal`. Avoid exact equality for many floating-point calculations in production tests; this example exposes the binary floating-point result intentionally.
-
-### 9.1 `global` and `nonlocal`
-
-- `global name` makes assignment target a module-level binding.
-- `nonlocal name` makes assignment target a binding in an enclosing function scope.
-
-Both increase non-local state coupling. Prefer explicit state objects or returned values when practical.
-
-<!-- TODO(media): Add a scope-frame animation showing local, enclosing, global, and built-in lookup plus local rebinding. Suggested path: ../Assets/Module-4/legb-scope.gif -->
-
-## 10. Argument binding, rebinding, and mutation
-
-Function arguments bind local parameter names to the same objects supplied by the caller [1].
+Once a `return` statement executes, later statements in that function body are not executed.
 
 ```python
-def append_marker(items):
-    items.append("processed")
+def example():
+    return 10
+    print("This statement cannot run")
 
 
-def replace_locally(items):
-    items = ["replacement"]
-    return items
-
-
-records = ["raw"]
-append_marker(records)
-local_result = replace_locally(records)
-
-print(records)
-print(local_result)
-
-assert records == ["raw", "processed"]
-assert local_result == ["replacement"]
+assert example() == 10
 ```
 
-- `append_marker` mutates the shared list object.
-- `replace_locally` rebinds only its local parameter name.
+### 8.1 A function without an explicit return
 
-The call mechanism is often described as **call by sharing**: object references are passed by value, and mutation is visible through all aliases to the object.
-
-## 11. Pure functions and side effects
-
-A **pure function**:
-
-- returns a result determined only by its arguments; and
-- creates no externally observable side effects.
+If execution reaches the end of a function without `return`, Python returns `None` [1].
 
 ```python
-def normalized_scores(scores, maximum):
-    if maximum <= 0:
-        raise ValueError("maximum must be positive")
-    return [score / maximum for score in scores]
+def display_line_name(line_name):
+    print(f"Line: {line_name}")
 
 
-source = [20, 15, 10]
-result = normalized_scores(source, 20)
-
-assert result == [1.0, 0.75, 0.5]
-assert source == [20, 15, 10]
+result = display_line_name("Assembly A")
+assert result is None
 ```
 
-Pure functions are easier to test and compose. Programs still need side effects for input, output, persistence, clocks, and randomness. Isolate those effects at explicit boundaries rather than pretending they do not exist.
+`None` represents the absence of a value. It is not the same as `0`, `False`, or an empty string.
 
-## 12. Default argument evaluation
+## 9. `print()` versus `return`
 
-Default expressions are evaluated once when the `def` statement executes, not once per call [1].
-
-Incorrect shared mutable default:
+`print()` displays text. `return` supplies data to the caller.
 
 ```python
-def collect(value, bucket=[]):
-    bucket.append(value)
-    return bucket
+def printed_total(first, second):
+    print(first + second)
 
 
-first = collect("A")
-second = collect("B")
-
-assert first is second
-assert second == ["A", "B"]
+def returned_total(first, second):
+    return first + second
 ```
 
-Correct independent default:
+The returned result can participate in another calculation:
 
 ```python
-def collect(value, bucket=None):
-    if bucket is None:
-        bucket = []
-    bucket.append(value)
-    return bucket
+daily_total = returned_total(125, 140)
+weekly_estimate = daily_total * 5
 
-
-first = collect("A")
-second = collect("B")
-
-assert first == ["A"]
-assert second == ["B"]
-assert first is not second
+assert daily_total == 265
+assert weekly_estimate == 1325
 ```
 
-An immutable default such as `None`, a number, or a string is normally safe.
-
-## 13. Documentation and type annotations
-
-### 13.1 Docstrings
-
-The first string literal in a function body becomes its documentation string [1].
-
-A concise public-function docstring should state:
-
-- action and returned result;
-- parameter meaning not obvious from names;
-- required units or ranges;
-- notable side effects; and
-- intentionally raised exceptions.
-
-Do not repeat the signature in prose.
-
-### 13.2 Type hints
+The printed version displays a value but returns `None`:
 
 ```python
-def weighted_total(values: list[float], weight: float = 1.0) -> float:
-    """Return the sum of values after applying one common weight."""
-    return sum(value * weight for value in values)
-
-
-assert weighted_total([1.0, 2.5], 2.0) == 7.0
+printed_result = printed_total(125, 140)
+assert printed_result is None
 ```
 
-Annotations are metadata and do not enforce types at runtime by themselves [3]. Static type checkers, IDEs, documentation tools, and frameworks may interpret them.
+Use `return` for calculated domain data. Use `print()` at the output boundary when a person needs to see the result.
 
-Type hints should express the supported interface, not overspecify one representation when any compatible abstraction is accepted.
+## 10. Decomposition
 
-## 14. Functions as objects
-
-Functions are first-class objects: they can be assigned to names, stored in containers, passed as arguments, and returned.
-
-```python
-def square(value):
-    return value * value
-
-
-def apply_twice(operation, value):
-    return operation(operation(value))
-
-
-result = apply_twice(square, 2)
-print(result)
-assert result == 16
-```
-
-This supports strategy selection and higher-order abstraction. Use named functions when behaviour deserves a stable name, documentation, or independent testing.
-
-## 15. Decomposition example
+Decomposition separates a requirement into responsibilities. A useful function performs one coherent job.
 
 Requirement:
 
-> Convert Celsius readings to Fahrenheit, discard readings outside a sensor's valid Celsius range, and report the mean converted value.
+> Calculate material cost, labor cost, and total production cost.
 
-Decomposition:
-
-```python
-def is_valid_celsius(value, minimum=-80.0, maximum=80.0):
-    return minimum <= value <= maximum
-
-
-def celsius_to_fahrenheit(value):
-    return value * 9 / 5 + 32
-
-
-def mean(values):
-    if not values:
-        raise ValueError("mean requires at least one value")
-    return sum(values) / len(values)
-
-
-def mean_valid_fahrenheit(readings):
-    converted = [
-        celsius_to_fahrenheit(value)
-        for value in readings
-        if is_valid_celsius(value)
-    ]
-    return mean(converted)
-
-
-result = mean_valid_fahrenheit([0.0, 20.0, 100.0])
-print(result)
-assert result == 50.0
-```
-
-Responsibilities remain separate:
-
-- validation policy;
-- unit conversion;
-- aggregation contract; and
-- workflow composition.
-
-<!-- TODO(media): Add a data-flow animation for validation, conversion, and aggregation functions. Show the rejected 100 °C reading. Suggested path: ../Assets/Module-4/function-pipeline.mp4 -->
-
-## 16. Common failure modes
-
-### 16.1 Mixed responsibility
-
-A function that parses input, mutates a database, calculates a result, and formats output has several reasons to change.
-
-### 16.2 Hidden global dependency
-
-A function that reads undeclared global configuration cannot be understood or tested from its signature alone.
-
-### 16.3 Printing instead of returning
-
-Printed text is difficult to compose into later calculations. Return domain data; format it at an output boundary.
-
-### 16.4 Missing return
-
-A path that reaches the end returns `None`. Trace every branch when callers require a value.
-
-### 16.5 Shared mutable default
-
-Mutable defaults retain state between calls. Use `None` and allocate inside.
-
-### 16.6 Undocumented mutation
-
-If a function changes a caller-owned object, state that side effect in its contract and name it clearly.
-
-### 16.7 Boolean flag overload
-
-Several flags can create many behaviour combinations. Separate strategies or functions may provide clearer contracts.
-
-### 16.8 Catch-all parameters
-
-Unnecessary `*args` and `**kwargs` hide spelling errors and supported options.
-
-## 17. Guided practice
-
-### 17.1 Contract completion
-
-Write the missing precondition, postcondition, and failure rule for:
-
-```python
-def percentage(part, whole):
-    return part / whole * 100
-```
-
-### 17.2 Mutation trace
-
-Trace names and objects for:
-
-```python
-def add_one(values):
-    values.append(1)
-    values = [99]
-    return values
-
-
-source = [0]
-result = add_one(source)
-```
-
-**Success criteria:** final `source` and `result` are correct, and rebinding is distinguished from mutation.
-
-### 17.3 Responsibility split
-
-Decompose “read a CSV file, validate rows, calculate totals, and print a report” into at least four functions. State each function's input and output.
-
-## 18. Independent practice
-
-### Exercise 1 — Numeric contract
-
-Implement `safe_mean(values)`.
-
-**Requirements:** return a float for non-empty numeric input; raise `ValueError` for empty input; do not mutate `values`.
-
-### Exercise 2 — Keyword-only policy
-
-Implement:
+Possible decomposition:
 
 ```text
-convert_temperature(value, /, *, source, target)
+calculate_material_cost
+calculate_labor_cost
+calculate_total_cost
+display_cost_report
 ```
 
-Support Celsius and Fahrenheit in both directions. Reject unsupported unit codes with `ValueError`.
+Dependencies:
 
-### Exercise 3 — Pure normalization
+```text
+quantity + material cost per unit -> material cost
+hours + hourly labor cost         -> labor cost
+material cost + labor cost        -> total cost
+total cost                        -> displayed report
+```
 
-Implement a function that returns normalized, non-empty tags from a list of strings.
+This structure makes data flow visible. A material-price rule can change without changing the labor calculation.
 
-**Constraints:** trim whitespace, use `casefold()`, preserve input order, and do not mutate the input list.
+## 11. Abstraction
 
-### Exercise 4 — Decomposition review
+Abstraction separates **what a function provides** from **how it performs the work**.
 
-Given a 30-line monolithic function from a previous exercise, produce:
+```python
+def calculate_material_cost(quantity, unit_cost):
+    return quantity * unit_cost
+```
 
-1. a responsibility map;
-2. proposed function contracts;
-3. refactored code; and
-4. assertions proving equivalent output for three inputs.
+A caller needs to know:
 
-## 19. Knowledge check
+- which arguments are required;
+- what each argument means;
+- what value is returned;
+- which input assumptions apply.
 
-1. How do decomposition and abstraction differ?
+The caller does not need to repeat the multiplication or depend on the local variable names inside the function.
+
+A function therefore has two useful views:
+
+| View | Main concern |
+| --- | --- |
+| Interface | Function name, parameters, result, assumptions |
+| Implementation | Statements that produce the result |
+
+## 12. Function contracts
+
+A function contract states the expected relationship between input and output.
+
+```text
+calculate_material_cost(quantity, unit_cost)
+
+Inputs:
+- quantity: non-negative number of units
+- unit_cost: non-negative cost per unit
+
+Returns:
+- quantity multiplied by unit_cost
+
+Side effects:
+- none
+```
+
+The contract does not need to describe each Python statement. It describes what callers may rely on.
+
+### 12.1 Preconditions and postconditions
+
+A **precondition** must be true before a function is called. A **postcondition** must be true after a successful call.
+
+For `calculate_material_cost`:
+
+- precondition: `quantity >= 0` and `unit_cost >= 0`;
+- postcondition: the returned value equals `quantity * unit_cost`;
+- side effect: no caller-owned object is changed.
+
+Validation and exception handling are developed in Module 7. In this module, examples state input assumptions explicitly.
+
+## 13. Docstrings
+
+A docstring is the first string literal inside a function body. It records the function's purpose and contract.
+
+```python
+def calculate_labor_cost(hours, hourly_rate):
+    """Return labor cost for non-negative hours and hourly rate."""
+    return hours * hourly_rate
+
+
+assert calculate_labor_cost(8, 45_000) == 360_000
+```
+
+Useful docstrings state information that is not already obvious from the syntax, such as units, allowed ranges, and whether input is modified.
+
+## 14. Local variables and scope
+
+A variable created inside a function is normally local to that function call.
+
+```python
+def calculate_net_output(gross_output, defective_output):
+    net_output = gross_output - defective_output
+    return net_output
+
+
+result = calculate_net_output(600, 25)
+assert result == 575
+```
+
+`net_output` exists while the function call is active. The caller receives its value through `return`.
+
+Different calls have separate local values:
+
+```python
+first_result = calculate_net_output(600, 25)
+second_result = calculate_net_output(450, 10)
+
+assert first_result == 575
+assert second_result == 440
+```
+
+### 14.1 Local names can hide outer names
+
+```python
+rate = 10
+
+
+def calculate(value):
+    rate = 2
+    return value * rate
+
+
+assert calculate(5) == 10
+assert rate == 10
+```
+
+Assignment inside the function creates the local `rate`. It does not change the outer `rate`.
+
+For beginner programs, prefer parameters and returned values over changing global variables. Explicit data flow is easier to trace and test.
+
+## 15. Calling one function from another
+
+A larger function may coordinate smaller functions:
+
+```python
+def calculate_material_cost(quantity, unit_cost):
+    return quantity * unit_cost
+
+
+def calculate_labor_cost(hours, hourly_rate):
+    return hours * hourly_rate
+
+
+def calculate_total_cost(quantity, unit_cost, hours, hourly_rate):
+    material = calculate_material_cost(quantity, unit_cost)
+    labor = calculate_labor_cost(hours, hourly_rate)
+    return material + labor
+
+
+total = calculate_total_cost(120, 8_500, 8, 45_000)
+assert total == 1_380_000
+```
+
+`calculate_total_cost` operates at a higher abstraction level. It coordinates two named calculations rather than repeating their arithmetic.
+
+## 16. Side effects and mutable arguments
+
+A side effect changes state outside the returned value. Printing is a side effect. Mutating a caller-owned list is another side effect.
+
+```python
+def add_measurement(measurements, value):
+    measurements.append(value)
+
+
+shift_output = [120, 125]
+add_measurement(shift_output, 130)
+
+assert shift_output == [120, 125, 130]
+```
+
+The parameter and caller can refer to the same list object. The mutation is therefore visible after the call.
+
+A transformation can instead create and return a new list:
+
+```python
+def with_measurement(measurements, value):
+    updated = measurements.copy()
+    updated.append(value)
+    return updated
+
+
+original = [120, 125]
+updated = with_measurement(original, 130)
+
+assert original == [120, 125]
+assert updated == [120, 125, 130]
+```
+
+Module 5 develops aliasing and copying in detail.
+
+## 17. Technical extension: default parameters
+
+A default parameter supplies a value when the caller omits that argument:
+
+```python
+def calculate_overtime_cost(hours, hourly_rate, multiplier=1.5):
+    return hours * hourly_rate * multiplier
+
+
+assert calculate_overtime_cost(2, 40_000) == 120_000
+assert calculate_overtime_cost(2, 40_000, 2.0) == 160_000
+```
+
+Required parameters should normally appear before parameters with defaults.
+
+Avoid a mutable object such as `[]` as a default value. Default values are created when the function definition is executed, so a mutable default can be shared across calls [1]. This rule is technical extension material and is not assessed in the Module 4 practicum.
+
+## 18. Technical extension: type hints
+
+Type hints document an intended interface:
+
+```python
+def calculate_defect_rate(defective: int, total: int) -> float:
+    return defective / total * 100
+```
+
+Annotations do not automatically validate arguments at runtime [1]. They support readers, development tools, and static type checkers. Runtime validation remains a separate design decision.
+
+## 19. Study case: Production Cost Calculator
+
+### 19.1 Requirement
+
+A production order contains:
+
+- quantity;
+- material cost per unit;
+- labor hours;
+- labor cost per hour;
+- budget limit.
+
+The program must calculate material cost, labor cost, total cost, and budget status.
+
+### 19.2 Responsibility map
+
+| Function | Input | Return |
+| --- | --- | --- |
+| `calculate_material_cost` | quantity, unit cost | material cost |
+| `calculate_labor_cost` | hours, hourly cost | labor cost |
+| `calculate_total_cost` | four cost inputs | combined cost |
+| `classify_budget` | total cost, budget | status string |
+
+### 19.3 Implementation
+
+```python
+def calculate_material_cost(quantity, unit_cost):
+    """Return material cost for one production order."""
+    return quantity * unit_cost
+
+
+def calculate_labor_cost(hours, hourly_rate):
+    """Return labor cost for one production order."""
+    return hours * hourly_rate
+
+
+def calculate_total_cost(quantity, unit_cost, hours, hourly_rate):
+    """Return combined material and labor cost."""
+    material = calculate_material_cost(quantity, unit_cost)
+    labor = calculate_labor_cost(hours, hourly_rate)
+    return material + labor
+
+
+def classify_budget(total_cost, budget):
+    """Return the order's budget classification."""
+    if total_cost <= budget:
+        return "WITHIN BUDGET"
+    return "OVER BUDGET"
+
+
+order_cost = calculate_total_cost(120, 8_500, 8, 45_000)
+order_status = classify_budget(order_cost, 1_400_000)
+
+print(f"Total cost: Rp{order_cost:,}")
+print(f"Status: {order_status}")
+
+assert order_cost == 1_380_000
+assert order_status == "WITHIN BUDGET"
+```
+
+Expected output:
+
+```text
+Total cost: Rp1,380,000
+Status: WITHIN BUDGET
+```
+
+<!-- TODO(media): Add a data-flow diagram showing the four cost functions, their inputs, and their returned values. Suggested path: ../Assets/Module-4/production-cost-functions.png -->
+
+## 20. Common failure modes
+
+### 20.1 Defining but not calling
+
+`def` creates a function. It does not run the function body.
+
+### 20.2 Forgetting parentheses
+
+`calculate_area` refers to the function object. `calculate_area(12, 8)` calls it.
+
+### 20.3 Printing instead of returning
+
+Printed output cannot directly participate in a later calculation. Return the value first, then print at the program boundary.
+
+### 20.4 Missing a return path
+
+If a branch reaches the end of the function, that path returns `None`.
+
+### 20.5 Incorrect indentation
+
+The function body must be indented consistently. Code aligned with `def` is outside the body.
+
+### 20.6 Depending on global variables
+
+A function that silently reads or changes global state is harder to reuse. Pass required data through parameters.
+
+### 20.7 Mixing responsibilities
+
+A function that reads input, calculates costs, modifies a list, and formats a report has several reasons to change. Separate these responsibilities.
+
+### 20.8 Hidden mutation
+
+If a function changes a supplied list, state that behavior in its contract. Prefer returning a new value when mutation is not required.
+
+## 21. Guided practice
+
+### 21.1 Trace a call
+
+Trace this call and record the parameter values, local variable, and returned value:
+
+```python
+def calculate_reject_rate(rejected, inspected):
+    percentage = rejected / inspected * 100
+    return percentage
+
+
+result = calculate_reject_rate(8, 200)
+```
+
+### 21.2 Convert printing to returning
+
+Rewrite the following function so its result can be used in another calculation:
+
+```python
+def display_total(first, second):
+    print(first + second)
+```
+
+### 21.3 Decompose a requirement
+
+Create a responsibility map for this requirement:
+
+> Calculate gross production, defective production, good production, and achievement percentage.
+
+## 22. Independent practice
+
+### Exercise 1: Unit conversion
+
+Implement `minutes_to_hours(minutes)` and return a decimal number of hours.
+
+### Exercise 2: Capacity calculation
+
+Implement `calculate_utilization(actual_output, maximum_output)`. Assume maximum output is positive.
+
+### Exercise 3: Function composition
+
+Implement separate functions for material cost, labor cost, and total production cost. The total function must call the two smaller functions.
+
+### Exercise 4: Contract review
+
+For each function from Exercise 3, state its parameters, preconditions, return value, and side effects.
+
+## 23. Knowledge check
+
+1. What is the difference between defining and calling a function?
 2. What is the difference between a parameter and an argument?
-3. What does a function return when no `return` executes?
-4. Why can mutation inside a function affect the caller?
-5. Why does rebinding a parameter not rebind the caller's name?
-6. When are default expressions evaluated?
-7. Do type hints perform runtime validation automatically?
-8. Why are pure functions generally easier to test?
+3. What does `return` do?
+4. What value is produced when a function reaches its end without `return`?
+5. Why is `print()` not a substitute for `return`?
+6. What is decomposition?
+7. What is abstraction?
+8. Why are local variables useful?
+9. How can a function change a caller-owned list?
+10. Do type hints enforce types automatically?
 
 <details>
 <summary>Answer key</summary>
 
-1. Decomposition divides responsibilities; abstraction defines a stable relevant interface while hiding detail.
-2. A parameter is a definition-time local name; an argument is a call-time expression or value.
-3. `None`.
-4. Caller and parameter may reference the same mutable object.
-5. Assignment changes the local binding, not another scope's binding.
-6. Once, when the function definition executes.
-7. No. They are metadata unless a separate tool or framework enforces them.
-8. Their results depend only on arguments and they do not require external-state setup or side-effect inspection.
+1. A definition creates and names a function. A call executes its body.
+2. A parameter is a name in the definition. An argument is supplied by a call.
+3. It ends the current call and provides a value to the caller.
+4. `None`.
+5. Printing displays data but does not provide the displayed value for later computation.
+6. It divides a problem into smaller responsibilities.
+7. It exposes the interface a caller needs while hiding unnecessary implementation detail.
+8. They isolate the temporary state of each call.
+9. The parameter and caller may refer to the same mutable object.
+10. No. Type hints are metadata unless another tool performs checking.
 
 </details>
 
-## 20. Module synthesis
+## 24. Module synthesis
 
-Function design sequence:
+Use this sequence when designing a function:
 
 ```text
-responsibility
-    -> contract
-    -> explicit dependencies
-    -> implementation
-    -> assertions or tests
-    -> composition
+identify one responsibility
+    -> define required input
+    -> define returned result
+    -> implement the calculation
+    -> test representative calls
+    -> combine the function with other functions
 ```
 
-Use parameters and returns to make data flow visible. Isolate mutation and external effects. A short function is not automatically cohesive, and a long function is not automatically incorrect; the decisive property is whether its contract expresses one stable responsibility.
+A function is useful when its name, inputs, result, and side effects form a clear contract. Function length alone does not determine quality. The important property is a coherent responsibility with explicit data flow.
 
 ## References
 
-1. Python Software Foundation. “More on Defining Functions.” *The Python Tutorial*. Accessed 31 August 2026. https://docs.python.org/3/tutorial/controlflow.html#more-on-defining-functions
-2. Python Software Foundation. “Function Definitions.” *Python Language Reference*. Accessed 31 August 2026. https://docs.python.org/3/reference/compound_stmts.html#function-definitions
-3. Python Software Foundation. “`typing` — Support for Type Hints.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/typing.html
+1. Python Software Foundation. "More Control Flow Tools." *The Python Tutorial*, Python 3.14.7 documentation. Accessed 25 September 2026. https://docs.python.org/3/tutorial/controlflow.html
+2. Bell, Ana. "Lecture 4: Decomposition, Abstraction, and Functions." *MIT OpenCourseWare 6.0001: Introduction to Computer Science and Programming in Python*, Fall 2016. Accessed 25 September 2026. https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/resources/lecture-4-decomposition-abstraction-and-functions/
 
 ---
 
-**Previous module:** Module 3 — String Manipulation  
-**Next module:** Module 5 — Tuples, Lists, and Aliasing
+**Previous module:** Module 3: Basic String Manipulation
+
+**Next module:** Module 5: Tuples, Lists, and Aliasing

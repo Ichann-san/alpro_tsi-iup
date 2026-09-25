@@ -1,573 +1,710 @@
-# Module 6 — Recursion and Dictionaries
+# Module 6: Dictionaries and Recursion
 
-> **Course:** Algorithms and Programming  
-> **Programming language:** Python  
-> **Supported runtime:** Python 3.10 or later  
-> **Resource type:** Technical learning module  
-> **Practical notebook:** Deferred to `../Practice/Modul_4-6.ipynb`  
-> **Estimated study time:** 4 hours
+**Course:** Algorithms and Programming
+
+**Program:** TSI International Undergraduate Program
+
+**Programming language:** Python 3.10 or later
+
+**Prerequisite:** Module 5
+
+**Estimated study time:** 4 to 5 hours
 
 ## 1. Module scope
 
-Recursion defines a result in terms of smaller instances of the same problem. A correct recursive function requires terminating base cases, progress toward them, and a valid composition rule. Dictionaries implement key-based mappings and are frequently used to store recursive subproblem results, represent sparse relationships, and index structured data.
+A dictionary stores associations between keys and values. It is suitable when a program should access information by a meaningful identifier such as a product code rather than a numeric position.
 
-This module covers call-stack reasoning, recurrence relations, recursive structure traversal, dictionary contracts, key requirements, views, and memoization.
+Recursion is a problem-solving technique in which a function solves a problem by calling itself with a smaller version of the same problem. A correct recursive function needs a base case and guaranteed progress toward that base case.
 
-<!-- TODO(media): Add an animation showing recursive calls expanding into stack frames and then returning values in reverse order. Suggested path: ../Assets/Module-6/recursion-call-stack.mp4 -->
+This module teaches dictionaries before recursion. The concrete mapping model supports later recursive examples, including a multi-level bill of materials.
+
+The assessed core covers basic dictionary operations and simple finite recursion. Formal recurrence analysis, mathematical induction, and performance optimization are deferred.
+
+<!-- TODO(media): Add an animation that compares numeric list indexing with key-based dictionary lookup. Suggested path: ../Assets/Module-6/list-versus-dictionary.mp4 -->
 
 ## 2. Learning outcomes
 
 After completing this module, a student should be able to:
 
-1. **Specify** recursive base cases, recursive cases, and a decreasing problem measure.
-2. **Trace** call frames and return-value composition.
-3. **Derive** simple time and space recurrences.
-4. **Recognize** repeated-subproblem recursion and apply dictionary memoization.
-5. **Construct** dictionaries and use key-based access, update, deletion, iteration, and views.
-6. **Explain** hashability, key equality, insertion order, and missing-key behaviour.
-7. **Traverse** nested dictionary structures recursively.
-8. **Diagnose** missing base cases, non-progressing calls, mutable keys, and unintended dictionary insertion.
+1. create a dictionary from key-value pairs;
+2. read, insert, and update dictionary entries;
+3. test key membership and use `get()` for optional lookup;
+4. iterate through keys, values, and items;
+5. build a frequency or quantity dictionary;
+6. identify the base case and recursive case of a function;
+7. verify that recursive arguments progress toward termination;
+8. trace recursive calls and returned results;
+9. recursively process a small hierarchical structure.
 
-## 3. Recursion model
+## 3. Prerequisite check
 
-NIST defines recursion as an algorithmic technique in which a function calls itself on part of a task [1]. A recursive specification normally contains:
+Before continuing, confirm that you can:
 
-1. **base case:** solve a minimal instance directly;
-2. **decomposition:** reduce the current instance to smaller instances;
-3. **recursive call:** solve those instances;
-4. **composition:** combine returned results; and
-5. **progress measure:** prove that every call moves toward a base case.
+- define and call functions;
+- use parameters and return values;
+- iterate through lists and tuples;
+- unpack a two-element tuple;
+- explain mutation and aliasing.
 
-### 3.1 Factorial
+### 3.1 Suggested study schedule
 
-For non-negative integer `n`:
+| Activity | Time |
+| --- | ---: |
+| Dictionary construction and operations | 60 minutes |
+| Dictionary iteration and accumulation | 45 minutes |
+| Recursion model and call tracing | 65 minutes |
+| Bill of Materials study case | 55 minutes |
+| Practice and knowledge check | 35 minutes |
+| **Total** | **260 minutes** |
 
-```text
-0! = 1
-n! = n × (n - 1)!    for n > 0
-```
+## 4. Why dictionaries are needed
 
-```python
-def factorial(n):
-    if not isinstance(n, int) or n < 0:
-        raise ValueError("n must be a non-negative integer")
-    if n == 0:
-        return 1
-    return n * factorial(n - 1)
-
-
-print(factorial(5))
-assert factorial(0) == 1
-assert factorial(5) == 120
-```
-
-Expected output:
-
-```text
-120
-```
-
-The progress measure is `n`. Each recursive call reduces it by one, and it is bounded below by zero.
-
-## 4. Call-stack trace
-
-A function call creates a new execution frame containing its local bindings and return position [2].
-
-For `factorial(4)`:
-
-```text
-factorial(4)
-  4 * factorial(3)
-        3 * factorial(2)
-              2 * factorial(1)
-                    1 * factorial(0)
-                          return 1
-                    return 1
-              return 2
-        return 6
-  return 24
-```
-
-Expansion proceeds toward the base case. Composition proceeds as frames return.
-
-Recursive auxiliary space is proportional to maximum active call depth. The factorial implementation uses `Θ(n)` active frames.
-
-<!-- TODO(media): Add a synchronized animation of the factorial recursion tree, active call stack, local n values, and return multiplication. Suggested path: ../Assets/Module-6/factorial-stack.gif -->
-
-## 5. Recursive correctness
-
-A proof by induction matches recursive structure:
-
-1. **Base:** show the function is correct for each base case.
-2. **Inductive hypothesis:** assume recursive calls correctly solve smaller valid inputs.
-3. **Step:** show decomposition and composition produce the correct result for the current input.
-4. **Termination:** show a well-founded measure decreases on every recursive path.
-
-Correct base output alone does not prove termination. Every recursive branch must make progress.
-
-Incorrect:
+Suppose product quantities are stored in parallel lists:
 
 ```python
-def countdown(n):
-    if n == 0:
-        return
-    countdown(n)  # no progress
+product_codes = ["PUMP", "VALVE", "SEAL"]
+quantities = [12, 8, 25]
 ```
 
-The function repeats the same state until Python raises `RecursionError`.
+To find the quantity for `VALVE`, the program must first find its index and then use the same index in `quantities`.
 
-## 6. Structural recursion
-
-Recursive data structures contain smaller instances of themselves. Nested lists and trees are natural inputs for structural recursion.
+A dictionary stores the association directly:
 
 ```python
-def nested_sum(value):
-    if isinstance(value, int):
-        return value
-    return sum(nested_sum(item) for item in value)
+inventory = {
+    "PUMP": 12,
+    "VALVE": 8,
+    "SEAL": 25,
+}
 
-
-data = [1, [2, 3], [[4], 5]]
-result = nested_sum(data)
-
-print(result)
-assert result == 15
+assert inventory["VALVE"] == 8
 ```
 
-Contract:
+The key expresses the lookup meaning. The program no longer depends on synchronized positions in two lists.
 
-- valid input is an integer or a finite list of valid inputs;
-- integer is the base representation;
-- list composition is summation; and
-- cyclic lists are outside the contract.
+## 5. Dictionary structure
 
-A cyclic structure would not progress toward a leaf without explicit visited-state tracking.
-
-## 7. Recurrence relations
-
-A recurrence expresses cost in terms of smaller inputs.
-
-For factorial:
-
-```text
-T(0) = Θ(1)
-T(n) = T(n - 1) + Θ(1)
-Therefore T(n) = Θ(n)
-```
-
-For a recursive function that makes two calls on size `n/2` and performs linear combination work:
-
-```text
-T(n) = 2T(n/2) + Θ(n)
-```
-
-Its solution is `Θ(n log n)`. Module 10 develops recurrence analysis in more detail.
-
-### 7.1 Repeated subproblems
-
-Naive Fibonacci recursion recomputes the same inputs:
+A dictionary contains key-value pairs:
 
 ```python
-def fibonacci(n):
-    if n < 0:
-        raise ValueError("n must be non-negative")
-    if n < 2:
-        return n
-    return fibonacci(n - 1) + fibonacci(n - 2)
-
-
-assert fibonacci(10) == 55
+inventory = {
+    "PUMP": 12,
+    "VALVE": 8,
+}
 ```
 
-The call tree grows exponentially because subproblems overlap. A dictionary can cache results.
-
-## 8. Python recursion limits
-
-Python exposes an interpreter recursion limit, which protects the underlying stack from unbounded recursion [3]. Deep valid inputs can still raise `RecursionError`.
-
-```python
-import sys
-
-limit = sys.getrecursionlimit()
-print(limit > 0)
-assert isinstance(limit, int)
-assert limit > 0
-```
-
-Expected output:
+In one pair:
 
 ```text
-True
+"PUMP": 12
+   key   value
 ```
 
-Do not increase the limit as a routine fix. Prefer iteration or an explicit stack when depth can scale with uncontrolled input. Changing the limit is implementation-sensitive and can risk interpreter failure if set excessively high [3].
+Properties:
 
-## 9. Dictionary contract
+- each key is unique within the dictionary;
+- values may be repeated;
+- a value may have any Python type;
+- a dictionary is mutable;
+- dictionaries preserve insertion order in modern Python [1].
 
-A dictionary is a mutable mapping from unique hashable keys to values [4].
+An empty dictionary uses braces:
 
-Core operations:
+```python
+inventory = {}
+assert len(inventory) == 0
+```
 
-| Operation | Behaviour |
+## 6. Reading values
+
+Use square brackets with a key:
+
+```python
+inventory = {"PUMP": 12, "VALVE": 8}
+
+pump_quantity = inventory["PUMP"]
+assert pump_quantity == 12
+```
+
+If the key does not exist, subscription raises `KeyError` [1]:
+
+```text
+inventory["MOTOR"]
+```
+
+Exception handling is introduced in Module 7. For now, prevent an unexpected lookup by testing membership or using `get()`.
+
+## 7. Inserting and updating entries
+
+Assignment with a new key inserts a pair:
+
+```python
+inventory = {"PUMP": 12}
+inventory["VALVE"] = 8
+
+assert inventory == {"PUMP": 12, "VALVE": 8}
+```
+
+Assignment with an existing key replaces its value:
+
+```python
+inventory["PUMP"] = 15
+assert inventory["PUMP"] == 15
+```
+
+To add to the current quantity:
+
+```python
+inventory["PUMP"] = inventory["PUMP"] + 4
+assert inventory["PUMP"] == 19
+```
+
+The shorter augmented assignment is equivalent for this integer value:
+
+```python
+inventory["PUMP"] += 1
+assert inventory["PUMP"] == 20
+```
+
+## 8. Membership and optional lookup
+
+The `in` operator tests keys:
+
+```python
+inventory = {"PUMP": 12, "VALVE": 8}
+
+assert "PUMP" in inventory
+assert "MOTOR" not in inventory
+```
+
+Use `get()` when a missing key has an expected default:
+
+```python
+seal_quantity = inventory.get("SEAL", 0)
+assert seal_quantity == 0
+```
+
+`get()` does not insert the missing key:
+
+```python
+assert "SEAL" not in inventory
+```
+
+Choose based on the contract:
+
+| Situation | Operation |
 | --- | --- |
-| `d[key]` | Return value; raise `KeyError` if absent |
-| `d[key] = value` | Insert or replace |
-| `del d[key]` | Delete; raise `KeyError` if absent |
-| `key in d` | Test key membership |
-| `d.get(key, default)` | Return value or default without insertion |
-| `d.setdefault(key, default)` | Return value; insert default if absent |
-| `d.pop(key)` | Remove and return value |
-| `d.keys()` / `values()` / `items()` | Return dynamic view objects |
+| Missing key is an error | `dictionary[key]` |
+| Missing key should use a default | `dictionary.get(key, default)` |
+| Program only needs to check existence | `key in dictionary` |
+
+## 9. Removing entries
+
+`del` removes a pair by key:
 
 ```python
-credits = {"Algorithms": 4, "Databases": 3}
-credits["Networks"] = 3
-credits["Algorithms"] = 5
+inventory = {"PUMP": 12, "VALVE": 8}
+del inventory["VALVE"]
 
-print(credits["Algorithms"])
-print("Networks" in credits)
-
-assert credits == {"Algorithms": 5, "Databases": 3, "Networks": 3}
+assert inventory == {"PUMP": 12}
 ```
 
-Python dictionaries preserve insertion order [2]. Replacing an existing key does not move it; deleting and reinserting places it at the end.
+`pop()` removes a pair and returns its value:
 
-## 10. Keys and hashability
+```python
+removed_quantity = inventory.pop("PUMP")
 
-A dictionary uses a key's hash and equality behaviour. A key must be hashable, which normally requires an immutable equality-relevant state [2].
+assert removed_quantity == 12
+assert inventory == {}
+```
 
-Valid common keys:
+Both operations need a valid key unless a default is supplied to `pop()`.
+
+## 10. Iterating through a dictionary
+
+Direct iteration visits keys:
+
+```python
+inventory = {"PUMP": 12, "VALVE": 8}
+codes = []
+
+for code in inventory:
+    codes.append(code)
+
+assert codes == ["PUMP", "VALVE"]
+```
+
+Use `.values()` when only values are needed:
+
+```python
+total_quantity = 0
+
+for quantity in inventory.values():
+    total_quantity += quantity
+
+assert total_quantity == 20
+```
+
+Use `.items()` for both key and value:
+
+```python
+records = []
+
+for code, quantity in inventory.items():
+    records.append(f"{code}: {quantity}")
+
+assert records == ["PUMP: 12", "VALVE: 8"]
+```
+
+Each item behaves like a two-element tuple and can be unpacked.
+
+## 11. Building a quantity dictionary
+
+A common pattern accumulates repeated records:
+
+```python
+receipts = [
+    ("BOLT", 12),
+    ("NUT", 8),
+    ("BOLT", 7),
+    ("NUT", 4),
+]
+
+inventory = {}
+
+for item, quantity in receipts:
+    inventory[item] = inventory.get(item, 0) + quantity
+
+assert inventory == {"BOLT": 19, "NUT": 12}
+```
+
+Loop invariant:
+
+> After processing the first `k` records, `inventory[item]` equals the sum of the processed quantities for that item.
+
+The invariant explains why the algorithm is correct at each iteration, not only for the final example.
+
+## 12. Dictionary keys
+
+Dictionary keys must be hashable. For the current course level, use immutable key types such as:
 
 - strings;
-- numbers;
-- tuples whose items are hashable;
-- frozen sets; and
-- appropriately designed immutable user objects.
+- integers;
+- tuples containing immutable elements.
 
-Lists and dictionaries are not valid keys.
+Lists and dictionaries cannot be keys because their contents can change.
 
 ```python
-locations = {
-    (0, 0): "origin",
-    (2, 5): "checkpoint",
+station_status = {
+    ("Line A", 1): "ACTIVE",
+    ("Line A", 2): "MAINTENANCE",
 }
 
-assert locations[(2, 5)] == "checkpoint"
-
-try:
-    locations[[2, 5]] = "invalid"
-except TypeError as error:
-    print(type(error).__name__)
+assert station_status[("Line A", 2)] == "MAINTENANCE"
 ```
 
-Expected output:
+Use keys with stable domain meaning. A product code is usually clearer than a temporary numeric position.
 
-```text
-TypeError
-```
+## 13. Nested dictionaries
 
-Numeric keys that compare equal, such as `1` and `1.0`, identify the same dictionary entry [2].
-
-## 11. Missing-key policies
-
-Choose policy from domain semantics.
-
-### 11.1 Required key
-
-Use `d[key]` when absence is an error.
-
-### 11.2 Optional read
-
-Use `d.get(key)` or `d.get(key, default)` when absence is expected and does not require insertion.
-
-### 11.3 Initialize on demand
-
-`setdefault()` can initialize a mutable accumulator:
+A dictionary value can be another dictionary:
 
 ```python
-groups = {}
-
-for course, level in [("Algorithms", 2), ("Databases", 2), ("AI", 3)]:
-    groups.setdefault(level, []).append(course)
-
-print(groups)
-assert groups == {2: ["Algorithms", "Databases"], 3: ["AI"]}
-```
-
-For frequent grouping, `collections.defaultdict` can make the initialization policy explicit.
-
-Do not use `get()` when stored `None` and absence must be distinguished; test membership or use a unique sentinel.
-
-## 12. Dictionary views and iteration
-
-`keys()`, `values()`, and `items()` return dynamic views that reflect later dictionary changes [4].
-
-```python
-scores = {"A": 80, "B": 90}
-items_view = scores.items()
-
-scores["C"] = 85
-
-print(list(items_view))
-assert list(items_view) == [("A", 80), ("B", 90), ("C", 85)]
-```
-
-Changing dictionary size during direct iteration can raise `RuntimeError`. Iterate over `list(d.items())` or build a new dictionary when structural mutation is required.
-
-Dictionary comprehensions construct mappings:
-
-```python
-squares = {value: value * value for value in range(1, 5)}
-assert squares == {1: 1, 2: 4, 3: 9, 4: 16}
-```
-
-If two generated items have equal keys, the later value replaces the earlier value.
-
-## 13. Frequency indexing
-
-```python
-tokens = ["data", "code", "data", "test", "code", "data"]
-frequency = {}
-
-for token in tokens:
-    frequency[token] = frequency.get(token, 0) + 1
-
-print(frequency)
-assert frequency == {"data": 3, "code": 2, "test": 1}
-```
-
-Invariant:
-
-> After processing the first `k` tokens, `frequency[x]` equals the number of occurrences of `x` among those `k` tokens.
-
-For production frequency counting, `collections.Counter` provides a specialized mapping. The explicit loop reveals the invariant.
-
-## 14. Memoization
-
-**Memoization** stores the result of a deterministic subproblem and reuses it when the same key appears again.
-
-```python
-def fibonacci_memoized(n, cache=None):
-    if n < 0:
-        raise ValueError("n must be non-negative")
-    if cache is None:
-        cache = {0: 0, 1: 1}
-    if n not in cache:
-        cache[n] = (
-            fibonacci_memoized(n - 1, cache)
-            + fibonacci_memoized(n - 2, cache)
-        )
-    return cache[n]
-
-
-print(fibonacci_memoized(30))
-assert fibonacci_memoized(30) == 832040
-```
-
-Each integer subproblem from `0` through `n` is computed once. Time becomes `Θ(n)` and cache space is `Θ(n)`, excluding call-stack space.
-
-Memoization is valid only when the cache key captures every input that affects the result and external mutable state does not invalidate cached values.
-
-<!-- TODO(media): Add a side-by-side call-tree animation for naive and memoized Fibonacci, highlighting cache hits and eliminated subtrees. Suggested path: ../Assets/Module-6/fibonacci-memoization.mp4 -->
-
-## 15. Recursive dictionary traversal
-
-Nested dictionaries can represent hierarchical configuration:
-
-```python
-def count_leaves(node):
-    if not isinstance(node, dict):
-        return 1
-    return sum(count_leaves(value) for value in node.values())
-
-
-configuration = {
-    "service": {
-        "host": "localhost",
-        "ports": {"http": 80, "https": 443},
+production = {
+    "Line A": {
+        "good": 480,
+        "defective": 12,
     },
-    "debug": False,
+    "Line B": {
+        "good": 510,
+        "defective": 8,
+    },
 }
 
-print(count_leaves(configuration))
-assert count_leaves(configuration) == 4
+assert production["Line B"]["good"] == 510
 ```
 
-The dictionary case recursively visits child values. Every non-dictionary value is a leaf. This is a domain-specific definition; a list inside the structure would count as one leaf unless the contract is extended.
+Nested mappings model hierarchical relationships. Each lookup moves one level deeper.
 
-## 16. Recursion versus iteration
+## 14. What recursion means
 
-Prefer recursion when:
+Recursion is a technique in which a function calls itself on a smaller instance of the same problem [2].
 
-- the input is recursively defined;
-- recursive decomposition mirrors the correctness argument;
-- maximum depth is safely bounded; and
-- composition is clearer than explicit stack management.
+A correct recursive solution normally contains:
 
-Prefer iteration or an explicit stack when:
+1. a **base case** that returns a result directly;
+2. a **recursive case** that calls the function with a smaller problem;
+3. a **progress measure** that moves toward the base case;
+4. a **combination step** that forms the current result.
 
-- input depth may be large or adversarial;
-- state progresses linearly;
-- Python call overhead matters; or
-- the iterative invariant is simpler.
+The objective is not repeated self-calling. The objective is reducing a problem until a directly solvable case is reached.
 
-Equivalent factorial:
+## 15. First recursive function
 
 ```python
-def factorial_iterative(n):
-    if not isinstance(n, int) or n < 0:
-        raise ValueError("n must be a non-negative integer")
-    result = 1
-    for value in range(2, n + 1):
-        result *= value
-    return result
+def sum_from_one(number):
+    """Return 1 + 2 + ... + number for a non-negative integer."""
+    if number == 0:
+        return 0
+    return number + sum_from_one(number - 1)
 
 
-assert factorial_iterative(5) == 120
+assert sum_from_one(0) == 0
+assert sum_from_one(4) == 10
 ```
 
-This uses constant auxiliary space under the ordinary scalar-variable model.
+Analysis:
 
-## 17. Common failure modes
+| Part | Code |
+| --- | --- |
+| Base case | `if number == 0: return 0` |
+| Recursive case | `sum_from_one(number - 1)` |
+| Progress measure | `number` decreases by one |
+| Combination | current `number` plus smaller result |
 
-### 17.1 Missing or unreachable base case
+The precondition is that `number` is a non-negative integer.
 
-Prove which inputs reach each base case.
+## 16. Tracing recursive calls
 
-### 17.2 Non-decreasing recursive argument
-
-Every path must reduce a well-founded measure.
-
-### 17.3 Exponential repeated work
-
-Draw the call tree and identify repeated subproblem keys. Memoize only when results are stable.
-
-### 17.4 Assuming recursion is unlimited
-
-Python limits interpreter recursion depth [3].
-
-### 17.5 Using a mutable key
-
-Mutable value-based keys cannot provide a stable hash.
-
-### 17.6 Confusing absent with stored `None`
-
-Use membership or a unique sentinel when the distinction matters.
-
-### 17.7 Mutating size during iteration
-
-Iterate over a snapshot or construct a result mapping.
-
-### 17.8 Cache key omits relevant state
-
-An incomplete memoization key can return an incorrect stale result.
-
-## 18. Guided practice
-
-### 18.1 Recursion trace
-
-Trace `factorial(4)` with one row per call frame. Record argument, pending operation, and returned value.
-
-### 18.2 Nested structure
-
-Trace `nested_sum([1, [2, [3]]])`. Identify every base case and composition.
-
-### 18.3 Dictionary state
-
-Starting from `{"A": 1}`, trace insertion, replacement, `setdefault()`, and deletion. Record key order after each step.
-
-## 19. Independent practice
-
-### Exercise 1 — Recursive power
-
-Implement exponentiation by repeated squaring for non-negative integer exponents:
+For `sum_from_one(3)`:
 
 ```text
-x^(2k) = (x^k)^2
-x^(2k+1) = x × (x^k)^2
+sum_from_one(3)
+    -> 3 + sum_from_one(2)
+           -> 2 + sum_from_one(1)
+                  -> 1 + sum_from_one(0)
+                         -> 0
+                  <- 1 + 0 = 1
+           <- 2 + 1 = 3
+    <- 3 + 3 = 6
 ```
 
-**Deliverable:** code, base case, progress measure, and recurrence.
+Calls expand until the base case. Returned values then combine in reverse order.
 
-### Exercise 2 — Recursive maximum
+Each active call has its own local parameter value.
 
-Return the maximum integer in a non-empty list using recursion.
+<!-- TODO(media): Add an animation of recursive calls expanding and returned values collapsing for sum_from_one(3). Suggested path: ../Assets/Module-6/recursive-call-stack.gif -->
 
-**Constraints:** no `max()`; define empty-input failure.
+## 17. Recursion requires progress
 
-### Exercise 3 — Inverted index
+This function does not progress:
 
-Given document tokens, construct a dictionary mapping each token to a list of positions at which it occurs.
+```text
+def broken_countdown(number):
+    if number == 0:
+        return
+    broken_countdown(number)
+```
 
-**Expected input:** `["a", "b", "a"]`.  
-**Expected result:** `{"a": [0, 2], "b": [1]}`.
+The recursive argument is unchanged. The function does not reach its base case for a positive input.
 
-### Exercise 4 — Nested configuration paths
+Correct form:
 
-Recursively return leaf paths from a nested dictionary as tuples.
+```python
+def countdown(number):
+    if number == 0:
+        return [0]
+    return [number] + countdown(number - 1)
 
-For `{"db": {"host": "localhost", "port": 5432}}`, include `("db", "host")` and `("db", "port")`.
 
-### Exercise 5 — Memoization audit
+assert countdown(3) == [3, 2, 1, 0]
+```
 
-Compare call counts for naive and memoized Fibonacci at `n = 20`. Count calls without relying on execution time.
+Before writing recursive code, answer:
 
-## 20. Knowledge check
+- What input is directly solvable?
+- What input becomes smaller?
+- Why must every valid call eventually reach the base case?
 
-1. What are the required parts of a recursive solution?
-2. Why does factorial recursion terminate for non-negative integers?
-3. What resource grows with recursive call depth?
-4. What makes a valid dictionary key?
-5. How do `d[key]` and `d.get(key)` differ?
-6. Are dictionary views snapshots?
-7. What condition makes memoization semantically valid?
-8. Why can nested recursive input require cycle detection?
+## 18. Recursive package counting
+
+Suppose one package holds at most `capacity` units. The number of packages can be calculated by repeatedly removing one full capacity.
+
+```python
+def count_packages(units, capacity):
+    """Return packages needed for non-negative units and positive capacity."""
+    if units == 0:
+        return 0
+    if units <= capacity:
+        return 1
+    return 1 + count_packages(units - capacity, capacity)
+
+
+assert count_packages(0, 10) == 0
+assert count_packages(10, 10) == 1
+assert count_packages(11, 10) == 2
+assert count_packages(27, 10) == 3
+```
+
+There are two base cases:
+
+- zero units require zero packages;
+- a positive quantity not exceeding capacity requires one package.
+
+For larger quantities, each call removes one package capacity.
+
+## 19. Recursion versus iteration
+
+The same package calculation can use a loop:
+
+```python
+def count_packages_iterative(units, capacity):
+    packages = 0
+
+    while units > 0:
+        packages += 1
+        units -= capacity
+
+    return packages
+
+
+assert count_packages_iterative(27, 10) == 3
+```
+
+Prefer iteration when state changes in a simple linear process. Prefer recursion when the data or problem is naturally defined in smaller instances of itself.
+
+Python limits interpreter recursion depth to protect the stack [3]. Recursion is therefore not appropriate for arbitrarily deep input.
+
+## 20. Recursive structures
+
+A hierarchical structure contains smaller structures of the same form. A bill of materials can represent an assembly as a list of component tuples:
+
+```python
+bill_of_materials = {
+    "pump_unit": [
+        ("motor_assembly", 1),
+        ("housing", 1),
+        ("seal", 2),
+    ],
+    "motor_assembly": [
+        ("coil", 2),
+        ("shaft", 1),
+    ],
+}
+```
+
+Interpretation:
+
+- one `pump_unit` requires one `motor_assembly`, one `housing`, and two `seal` items;
+- one `motor_assembly` requires two `coil` items and one `shaft`;
+- a name absent from the dictionary is treated as a raw material.
+
+This structure is recursive because an assembly can contain another assembly.
+
+## 21. Recursive bill of materials expansion
+
+```python
+def expand_requirements(item, quantity, bill_of_materials):
+    """Return raw-material quantities for an item and positive quantity."""
+    if item not in bill_of_materials:
+        return {item: quantity}
+
+    totals = {}
+
+    for component, amount_per_item in bill_of_materials[item]:
+        component_quantity = quantity * amount_per_item
+        component_totals = expand_requirements(
+            component,
+            component_quantity,
+            bill_of_materials,
+        )
+
+        for material, amount in component_totals.items():
+            totals[material] = totals.get(material, 0) + amount
+
+    return totals
+
+
+requirements = expand_requirements("pump_unit", 2, bill_of_materials)
+
+assert requirements == {
+    "coil": 4,
+    "shaft": 2,
+    "housing": 2,
+    "seal": 4,
+}
+```
+
+Base case:
+
+```text
+item is not an assembly key -> return the raw item and required quantity
+```
+
+Recursive case:
+
+```text
+item is an assembly -> expand every component and merge its raw-material totals
+```
+
+Progress depends on a finite acyclic bill of materials. Cycle detection is outside this module. A real production system must reject relationships such as assembly A requiring B while B requires A.
+
+<!-- TODO(media): Add a tree animation that expands two pump units into raw-material totals. Suggested path: ../Assets/Module-6/bom-expansion.mp4 -->
+
+## 22. Technical extension: memoization
+
+Some recursive functions solve the same smaller input many times. Memoization stores a completed result in a dictionary and reuses it.
+
+Conceptual pattern:
+
+```python
+def solve(problem, cache):
+    if problem in cache:
+        return cache[problem]
+
+    result = solve_smaller_problem(problem)
+    cache[problem] = result
+    return result
+```
+
+Memoization is correct only when the cache key includes every input that affects the result. Performance analysis and memoized Fibonacci are developed in Module 10.
+
+## 23. Common failure modes
+
+### 23.1 Looking up a missing key
+
+`dictionary[key]` raises `KeyError` if the key is absent. Test membership or use `get()` when absence is expected.
+
+### 23.2 Testing values instead of keys
+
+`item in dictionary` checks keys, not values.
+
+### 23.3 Replacing instead of accumulating
+
+For repeated records, use the previous quantity plus the new quantity.
+
+### 23.4 Mutating dictionary size during iteration
+
+Adding or removing keys during direct iteration can fail. Build a separate result or iterate over a snapshot.
+
+### 23.5 Missing a recursive base case
+
+Every valid recursive path must reach a directly returned result.
+
+### 23.6 Recursive call does not become smaller
+
+Identify a progress measure and verify that it decreases on every recursive path.
+
+### 23.7 Ignoring invalid recursive input
+
+State preconditions. A recursion designed for non-negative integers may not terminate for negative values.
+
+### 23.8 Cyclic hierarchical data
+
+A cyclic structure can revisit the same item indefinitely. The bill of materials study case assumes no cycles.
+
+## 24. Guided practice
+
+### 24.1 Dictionary state trace
+
+Record the dictionary after each statement:
+
+```python
+inventory = {}
+inventory["BOLT"] = 10
+inventory["NUT"] = 5
+inventory["BOLT"] += 4
+```
+
+### 24.2 Quantity accumulator
+
+Complete a loop that converts this list into `{"A": 7, "B": 3}`:
+
+```python
+records = [("A", 2), ("B", 3), ("A", 5)]
+```
+
+### 24.3 Recursive trace
+
+Trace `count_packages(23, 10)`. Record the arguments of every call and the returned value.
+
+### 24.4 Base-case design
+
+State the base case, progress measure, and precondition for a recursive function that returns `1 + 2 + ... + n`.
+
+## 25. Independent practice
+
+### Exercise 1: Frequency dictionary
+
+Create a function that counts how many times each machine code appears in a list.
+
+### Exercise 2: Inventory accumulation
+
+Create a function that converts `(item, quantity)` records into a quantity dictionary.
+
+### Exercise 3: Recursive list total
+
+Return the sum of a list recursively. The empty list returns zero.
+
+### Exercise 4: Package planner
+
+For each item in an inventory dictionary, calculate the number of packages required from a capacity dictionary.
+
+### Exercise 5: Bill of materials trace
+
+Trace the recursive expansion of one `pump_unit`. List every function call and the dictionary it returns.
+
+## 26. Knowledge check
+
+1. What relationship does a dictionary store?
+2. What happens when a value is assigned to an existing key?
+3. What does `key in dictionary` test?
+4. How do subscription and `get()` differ for a missing key?
+5. What does `.items()` provide during iteration?
+6. What are the required parts of a recursive solution?
+7. Why does `sum_from_one(number - 1)` make progress?
+8. What is the base case in bill of materials expansion?
+9. Why can a cycle prevent recursive termination?
+10. When is iteration preferable to recursion in Python?
 
 <details>
 <summary>Answer key</summary>
 
-1. Base case, smaller recursive subproblem, recursive call, composition, and progress argument.
-2. `n` decreases by one and is bounded below by zero.
-3. Active call-stack space.
-4. Stable hashability and equality compatible with the hash.
-5. Subscription raises `KeyError` when absent; `get()` returns a default without insertion.
-6. No. They dynamically reflect mapping changes.
-7. The key captures all result-determining input and cached results remain valid.
-8. A cycle may revisit the same object indefinitely instead of reaching a leaf.
+1. It maps unique keys to values.
+2. The previous value for that key is replaced.
+3. Whether the key exists.
+4. Subscription raises `KeyError`; `get()` returns `None` or a supplied default.
+5. Key-value pairs that can be unpacked into two names.
+6. A base case, smaller recursive input, progress toward termination, and result combination.
+7. The non-negative integer decreases by one and approaches zero.
+8. An item absent from the assembly dictionary is a raw material and returns directly.
+9. A path may revisit the same item instead of reaching a raw material.
+10. When state progresses linearly, depth may be large, or an explicit loop is clearer.
 
 </details>
 
-## 21. Module synthesis
-
-Recursive reasoning:
-
-```text
-base cases
-    -> smaller subproblems
-    -> recursive results
-    -> composition
-    -> termination and cost recurrence
-```
+## 27. Module synthesis
 
 Dictionary reasoning:
 
 ```text
-key contract
-    -> lookup/update policy
-    -> missing-key policy
-    -> iteration and mutation policy
+choose meaningful keys
+    -> define value meaning
+    -> select missing-key behavior
+    -> update or accumulate
+    -> iterate without unsafe structural mutation
 ```
 
-Dictionaries complement recursion by indexing subproblems and representing nested or sparse relationships. They do not repair an invalid recurrence; prove correctness and cache validity separately.
+Recursive reasoning:
+
+```text
+define the base case
+    -> define a smaller problem
+    -> prove progress
+    -> combine returned results
+    -> trace representative and boundary inputs
+```
+
+Dictionaries organize relationships. Recursion processes self-similar problems. A hierarchical bill of materials uses both: the dictionary records assembly relationships, and recursion follows those relationships until raw materials are reached.
 
 ## References
 
-1. Black, P. E., and P. Rodgers. “Recursion.” *Dictionary of Algorithms and Data Structures*, National Institute of Standards and Technology, modified 30 September 2013. Accessed 31 August 2026. https://www.nist.gov/dads/HTML/recursion.html
-2. Python Software Foundation. “Data Model: Objects, Values and Types.” *Python Language Reference*. Accessed 31 August 2026. https://docs.python.org/3/reference/datamodel.html
-3. Python Software Foundation. “`sys.getrecursionlimit()`.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/sys.html#sys.getrecursionlimit
-4. Python Software Foundation. “Mapping Types — `dict`.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/stdtypes.html#mapping-types-dict
+1. Python Software Foundation. "Data Structures." *The Python Tutorial*, Python 3.14.7 documentation. Accessed 25 September 2026. https://docs.python.org/3/tutorial/datastructures.html
+2. Grimson, Eric. "Lecture 6: Recursion and Dictionaries." *MIT OpenCourseWare 6.0001: Introduction to Computer Science and Programming in Python*, Fall 2016. Accessed 25 September 2026. https://live.ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/resources/lecture-6-recursion-and-dictionaries/
+3. Python Software Foundation. "sys.getrecursionlimit()." *Python 3 Standard Library*. Accessed 25 September 2026. https://docs.python.org/3/library/sys.html#sys.getrecursionlimit
 
 ---
 
-**Previous module:** Module 5 — Tuples, Lists, and Aliasing  
-**Next module:** Module 7 — Testing, Debugging, and Exceptions
+**Previous module:** Module 5: Tuples, Lists, and Aliasing
+
+**Next module:** Module 7: Testing, Debugging, and Exceptions

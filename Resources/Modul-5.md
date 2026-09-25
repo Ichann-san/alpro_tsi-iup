@@ -1,141 +1,289 @@
-# Module 5 — Tuples, Lists, and Aliasing
+# Module 5: Tuples, Lists, and Aliasing
 
-> **Course:** Algorithms and Programming  
-> **Programming language:** Python  
-> **Supported runtime:** Python 3.10 or later  
-> **Resource type:** Technical learning module  
-> **Practical notebook:** Deferred to `../Practice/Modul_4-6.ipynb`  
-> **Estimated study time:** 3–4 hours
+**Course:** Algorithms and Programming
+
+**Program:** TSI International Undergraduate Program
+
+**Programming language:** Python 3.10 or later
+
+**Prerequisite:** Module 4
+
+**Estimated study time:** 3 to 4 hours
 
 ## 1. Module scope
 
-Tuples and lists are ordered Python sequences with different mutation contracts. A tuple fixes its directly stored references after construction; a list permits insertion, replacement, and deletion. Both can participate in aliasing because variables and containers hold object references.
+Lists and tuples store ordered collections. They support similar reading operations, but they have different update rules:
 
-This module develops a precise object-graph model for assignment, slicing, shallow copying, and deep copying. The central question is not “Was a copy made?” but “Which objects are new, and which nested objects remain shared?”
+- a list is mutable, so its elements can be changed;
+- a tuple is immutable, so its stored element references cannot be replaced.
 
-<!-- TODO(media): Add an object-graph animation comparing tuple construction, list construction, alias assignment, shallow copy, and deep copy. Suggested path: ../Assets/Module-5/copying-object-graphs.mp4 -->
+Variables do not contain independent copies automatically. Two names may refer to the same list. This relationship is called aliasing. A mutation performed through either name is visible through both names.
+
+This module develops a practical model for sequences, mutation, aliases, and independent copies. The assessed core uses flat lists and tuples. Nested shallow-copy behavior appears as a technical extension.
+
+<!-- TODO(media): Add an object-reference animation comparing list aliasing, a flat copy, and two independent mutations. Suggested path: ../Assets/Module-5/aliasing-and-copying.mp4 -->
 
 ## 2. Learning outcomes
 
 After completing this module, a student should be able to:
 
-1. **Compare** tuple and list contracts, operations, and use cases.
-2. **Apply** indexing, slicing, concatenation, repetition, and unpacking.
-3. **Distinguish** value equality from object identity.
-4. **Trace** aliases through nested mutable containers.
-5. **Predict** the effects of assignment, shallow copying, and deep copying.
-6. **Construct** list comprehensions without hidden mutation.
-7. **Select** tuples or lists based on semantic stability rather than syntax preference.
-8. **Diagnose** repeated-reference initialization, in-place return values, and accidental caller mutation.
+1. create and access lists and tuples;
+2. apply indexing, slicing, membership tests, and iteration;
+3. pack and unpack tuple values;
+4. modify a list with assignment and common methods;
+5. explain why a tuple does not support element replacement;
+6. distinguish equality from identity;
+7. predict the effect of mutation through an alias;
+8. create an independent flat-list copy;
+9. design a function that either mutates input intentionally or returns a new collection.
 
-## 3. Sequence contract
+## 3. Prerequisite check
 
-Python sequences provide ordered positional access. Common operations include [1]:
+Before continuing, confirm that you can:
 
-| Operation | Meaning |
-| --- | --- |
-| `len(s)` | Number of items |
-| `s[i]` | Item at index `i` |
-| `s[i:j:k]` | Slice |
-| `x in s` | Membership test |
-| `s + t` | Concatenation |
-| `s * n` | Repetition |
-| `min(s)` / `max(s)` | Extremum when items are comparable |
-| `s.index(x)` | First matching position |
-| `s.count(x)` | Number of matching items |
+- create and iterate through a list;
+- define a function with parameters;
+- return a result from a function;
+- trace assignment statements.
 
-Indexing returns one stored object reference. Slicing constructs a new outer sequence containing references selected from the source.
+### 3.1 Suggested study schedule
 
-## 4. Tuples
+| Activity | Time |
+| --- | ---: |
+| Sequence operations and tuples | 45 minutes |
+| List mutation and methods | 50 minutes |
+| Identity, aliasing, and copies | 55 minutes |
+| Shift Output Summary study case | 35 minutes |
+| Practice and knowledge check | 25 minutes |
+| **Total** | **210 minutes** |
 
-### 4.1 Construction
+## 4. Ordered sequences
 
-The comma creates a tuple; parentheses usually group the expression.
+Lists, tuples, and strings are ordered sequences. Position determines how an element is accessed.
 
 ```python
-empty = ()
-singleton = (42,)
-coordinates = 3, 5
+output_values = [120, 128, 125, 132]
+shift_record = ("Shift A", 120, 8)
 
-print(empty)
-print(singleton)
-print(coordinates)
-
-assert len(empty) == 0
-assert singleton == (42,)
-assert coordinates == (3, 5)
+assert output_values[0] == 120
+assert output_values[-1] == 132
+assert shift_record[0] == "Shift A"
 ```
 
-Expected output:
+Indices begin at zero. A negative index counts from the end.
+
+Common sequence operations:
+
+| Operation | Result |
+| --- | --- |
+| `len(sequence)` | number of elements |
+| `sequence[index]` | one element |
+| `sequence[start:stop]` | a slice |
+| `value in sequence` | membership test |
+| `first + second` | concatenated sequence of the same type |
+| `sequence * count` | repeated sequence |
+
+## 5. Indexing and slicing
+
+Indexing returns one stored element:
+
+```python
+measurements = [18.5, 19.0, 18.8, 19.3]
+
+assert measurements[1] == 19.0
+assert measurements[-2] == 18.8
+```
+
+Slicing returns a new sequence containing a selected range:
+
+```python
+first_half = measurements[:2]
+second_half = measurements[2:]
+
+assert first_half == [18.5, 19.0]
+assert second_half == [18.8, 19.3]
+```
+
+The stop index is excluded. `measurements[1:3]` contains positions `1` and `2`.
+
+## 6. Iterating through a sequence
+
+A direct `for` loop is appropriate when the calculation needs each value:
+
+```python
+output_values = [120, 128, 125, 132]
+total_output = 0
+
+for output in output_values:
+    total_output += output
+
+assert total_output == 505
+```
+
+Use `range(len(sequence))` when the numeric position is required:
+
+```python
+labels = []
+
+for index in range(len(output_values)):
+    labels.append(f"Period {index + 1}: {output_values[index]}")
+
+assert labels[0] == "Period 1: 120"
+```
+
+Prefer direct iteration when the index has no purpose.
+
+## 7. Tuples
+
+A tuple is an ordered immutable sequence. Parentheses commonly make tuple boundaries visible:
+
+```python
+shift_record = ("Shift A", 505, "TARGET MET")
+
+assert len(shift_record) == 3
+assert shift_record[1] == 505
+```
+
+Tuple elements may have different types because a tuple often represents one fixed record.
+
+Examples:
+
+```python
+coordinate = (4, 7)
+production_result = ("PUMP-01", 120, 3.5)
+empty_tuple = ()
+single_item_tuple = (120,)
+
+assert len(single_item_tuple) == 1
+```
+
+The comma creates a one-element tuple. `(120)` is only the integer `120` inside parentheses.
+
+### 7.1 Tuple packing and unpacking
+
+Packing combines values into one tuple:
+
+```python
+result = 121, 135, 514
+assert result == (121, 135, 514)
+```
+
+Unpacking assigns tuple elements to separate names:
+
+```python
+minimum_output, maximum_output, total_output = result
+
+assert minimum_output == 121
+assert maximum_output == 135
+assert total_output == 514
+```
+
+The number of target names must match the number of elements.
+
+### 7.2 Returning a tuple from a function
+
+```python
+def output_range(values):
+    return min(values), max(values)
+
+
+minimum, maximum = output_range([128, 121, 135, 130])
+
+assert minimum == 121
+assert maximum == 135
+```
+
+The function returns one tuple. Unpacking separates its elements at the call site.
+
+### 7.3 Tuple immutability
+
+This assignment is invalid:
 
 ```text
-()
-(42,)
-(3, 5)
+record = ("Shift A", 505)
+record[1] = 510
 ```
 
-`(42)` is the integer `42`. The trailing comma is required for a one-item tuple.
+Python raises `TypeError` because tuple elements cannot be replaced.
 
-### 4.2 Packing and unpacking
+Immutability does not mean every referenced object is unchangeable. A tuple may contain a list:
 
 ```python
-record = ("CS204", "Algorithms", 4)
-code, title, credits = record
+record = ("Shift A", [120, 125])
+record[1].append(130)
 
-print(code, credits)
-assert code == "CS204"
-assert title == "Algorithms"
-assert credits == 4
+assert record == ("Shift A", [120, 125, 130])
 ```
 
-Unpacking requires the number of targets to match, unless one target uses starred collection:
+The tuple still refers to the same list. The list itself was mutated. This boundary is technical extension material.
+
+## 8. Lists
+
+A list is an ordered mutable sequence:
 
 ```python
-first, *middle, last = (10, 20, 30, 40, 50)
+measurements = [120, 125, 130]
+measurements[1] = 128
 
-assert first == 10
-assert middle == [20, 30, 40]
-assert last == 50
+assert measurements == [120, 128, 130]
 ```
 
-The starred target receives a list.
+Mutation changes the existing list object. This differs from string processing, where methods return new strings because strings are immutable.
 
-### 4.3 Immutability boundary
-
-A tuple's direct item references cannot be replaced, inserted, or deleted [1]. A referenced mutable object can still change:
+### 8.1 Adding elements
 
 ```python
-configuration = ("v1", ["read", "write"])
-configuration[1].append("delete")
+measurements = [120, 125]
+measurements.append(130)
+measurements.extend([128, 132])
 
-print(configuration)
-assert configuration == ("v1", ["read", "write", "delete"])
+assert measurements == [120, 125, 130, 128, 132]
 ```
 
-The tuple still references the same two objects. Its nested list changed.
-
-## 5. Lists
-
-Lists are mutable sequences [1]. They support item and slice assignment, deletion, and methods including `append()`, `extend()`, `insert()`, `remove()`, `pop()`, `clear()`, `sort()`, and `reverse()` [2].
+- `append(value)` adds one element;
+- `extend(sequence)` adds each element from another sequence;
+- `insert(index, value)` inserts before a position.
 
 ```python
-queue = ["A", "B"]
-queue.append("C")
-queue.extend(["D", "E"])
-removed = queue.pop(1)
-
-print(queue)
-print(removed)
-
-assert queue == ["A", "C", "D", "E"]
-assert removed == "B"
+measurements.insert(1, 122)
+assert measurements == [120, 122, 125, 130, 128, 132]
 ```
 
-### 5.1 In-place methods
+### 8.2 Removing elements
 
-Methods that mutate a list, such as `append()` and `sort()`, normally return `None` [2].
+```python
+values = [120, 125, 130, 125]
 
-Incorrect:
+values.remove(125)
+last_value = values.pop()
+del values[0]
+
+assert values == [130]
+assert last_value == 125
+```
+
+- `remove(value)` deletes the first equal value;
+- `pop()` removes and returns an element;
+- `del` removes by index or slice.
+
+### 8.3 Sorting and reversing
+
+```python
+values = [128, 121, 135, 130]
+sorted_values = sorted(values)
+
+assert values == [128, 121, 135, 130]
+assert sorted_values == [121, 128, 130, 135]
+```
+
+`sorted(values)` returns a new list. `values.sort()` changes the existing list:
+
+```python
+values.sort()
+assert values == [121, 128, 130, 135]
+```
+
+List methods such as `append()`, `extend()`, `sort()`, and `reverse()` modify the list and return `None`.
 
 ```python
 values = [3, 1, 2]
@@ -145,377 +293,371 @@ assert values == [1, 2, 3]
 assert result is None
 ```
 
-Use `sorted(values)` when a new sorted list is required:
+## 9. Mutation and rebinding
+
+Mutation changes an object. Rebinding makes a name refer to a different object.
 
 ```python
-source = [3, 1, 2]
-ordered = sorted(source)
-
-assert source == [3, 1, 2]
-assert ordered == [1, 2, 3]
+values = [120, 125]
+values.append(130)       # mutation
+values = [140, 145]      # rebinding
 ```
 
-### 5.2 Slice assignment
+These operations have different effects when aliases exist.
 
-Slice assignment can replace a region with a different number of items:
+## 10. Aliasing
 
-```python
-values = [0, 1, 2, 3, 4]
-values[1:4] = [10, 20]
-
-print(values)
-assert values == [0, 10, 20, 4]
-```
-
-This mutates the existing list; aliases observe the change.
-
-## 6. Equality, identity, and aliasing
-
-- `a == b` asks whether values compare equal.
-- `a is b` asks whether names refer to the same object.
-- **Aliasing** occurs when two references reach the same mutable object.
+Assignment does not automatically copy a list:
 
 ```python
-original = ["red", "blue"]
+original = [120, 125, 130]
 alias = original
-equal_copy = ["red", "blue"]
 
-print(original == equal_copy)
-print(original is alias)
-print(original is equal_copy)
+alias[0] = 118
 
-assert original == equal_copy
-assert original is alias
-assert original is not equal_copy
+assert original == [118, 125, 130]
+assert alias == [118, 125, 130]
 ```
 
-Assignment does not copy an object. It binds another name to the existing object [3].
+`original` and `alias` refer to the same list object. A mutation through either name changes that shared object.
 
-### 6.1 Mutation through an alias
+<!-- TODO(media): Add a memory diagram with two names pointing to one list, followed by a mutation through one alias. Suggested path: ../Assets/Module-5/two-names-one-list.gif -->
+
+### 10.1 Equality and identity
+
+Equality asks whether values are equivalent. Identity asks whether two names refer to the same object.
 
 ```python
-primary = [1, 2]
-secondary = primary
+first = [1, 2, 3]
+second = [1, 2, 3]
+alias = first
 
-secondary.append(3)
-
-assert primary == [1, 2, 3]
-assert primary is secondary
+assert first == second
+assert first is not second
+assert first is alias
 ```
 
-Rebinding `secondary = [9]` would not change `primary`. Mutation changes an object; assignment changes a binding.
+Use `==` for ordinary value comparison. Use `is` for identity questions, especially comparisons with `None`.
 
-<!-- TODO(media): Add an animation contrasting mutation of a shared list with rebinding one alias to a new list. Suggested path: ../Assets/Module-5/mutation-vs-rebinding.gif -->
+## 11. Creating an independent flat copy
 
-## 7. Shallow copies
-
-A **shallow copy** creates a new outer container and reuses references to nested objects [4].
-
-Common shallow-copy operations for a list:
-
-- `source.copy()`;
-- `list(source)`;
-- `source[:]`; and
-- `copy.copy(source)`.
+For a flat list, these forms create a new list object:
 
 ```python
-source = [["A"], ["B"]]
-shallow = source.copy()
+source = [120, 125, 130]
 
-print(source is shallow)
-print(source[0] is shallow[0])
+copy_with_method = source.copy()
+copy_with_slice = source[:]
+copy_with_constructor = list(source)
 
-shallow.append(["C"])
-shallow[0].append("shared")
+copy_with_method[0] = 118
 
-assert source is not shallow
-assert len(source) == 2
-assert len(shallow) == 3
-assert source[0] == ["A", "shared"]
-assert source[0] is shallow[0]
+assert source == [120, 125, 130]
+assert copy_with_method == [118, 125, 130]
+assert copy_with_slice is not source
+assert copy_with_constructor is not source
 ```
 
-The outer append affects only `shallow`. Mutation of the nested list is visible through both outer containers.
+The new outer list can be changed without changing the source outer list.
 
-## 8. Deep copies
+### 11.1 Technical extension: shallow copies
 
-`copy.deepcopy()` recursively copies reachable components while tracking objects already copied to handle cycles and preserve sharing relationships where appropriate [4].
+`copy()`, slicing, and `list()` make shallow copies. The outer list is new, but nested objects remain shared.
 
 ```python
-from copy import deepcopy
+source = [[120, 125], [130, 135]]
+copied = source.copy()
 
-source = [["A"], ["B"]]
-deep = deepcopy(source)
+copied[0].append(128)
 
-deep[0].append("independent")
-
-assert source == [["A"], ["B"]]
-assert deep == [["A", "independent"], ["B"]]
-assert source is not deep
-assert source[0] is not deep[0]
+assert source == [[120, 125, 128], [130, 135]]
+assert copied is not source
+assert copied[0] is source[0]
 ```
 
-Deep copying is not automatically the correct policy:
+The assessed practicum uses flat lists. For nested data, decide whether sharing nested objects is acceptable before choosing a copying method.
 
-- some resources cannot or should not be duplicated;
-- copying a large graph is expensive;
-- preserving shared identity may be semantically required; and
-- custom classes can control copying behaviour.
+## 12. Function boundaries and list ownership
 
-Prefer constructing the exact new structure required by the operation.
+A function should make its mutation policy clear.
 
-## 9. Repetition and the shared-reference trap
-
-Sequence repetition copies references, not nested objects.
+### 12.1 Function that mutates input
 
 ```python
-incorrect = [[]] * 3
-incorrect[0].append("X")
+def record_output(output_values, new_value):
+    """Append new_value to output_values and return None."""
+    output_values.append(new_value)
 
-print(incorrect)
-assert incorrect == [["X"], ["X"], ["X"]]
-assert incorrect[0] is incorrect[1]
+
+measurements = [120, 125]
+record_output(measurements, 130)
+
+assert measurements == [120, 125, 130]
 ```
 
-Create independent inner lists with a comprehension:
+### 12.2 Function that returns a new list
 
 ```python
-correct = [[] for _ in range(3)]
-correct[0].append("X")
+def revised_output(output_values, index, new_value):
+    """Return an updated copy without changing output_values."""
+    revised = output_values.copy()
+    revised[index] = new_value
+    return revised
 
-print(correct)
-assert correct == [["X"], [], []]
-assert correct[0] is not correct[1]
+
+measurements = [120, 125, 130]
+revised = revised_output(measurements, 1, 128)
+
+assert measurements == [120, 125, 130]
+assert revised == [120, 128, 130]
 ```
 
-The same issue appears with `[[0] * columns] * rows`.
+Neither design is universally correct. The contract must state which behavior is intended.
 
-<!-- TODO(media): Add a memory-reference animation for [[]] * 3 versus a list comprehension, showing one shared inner list versus three independent lists. Suggested path: ../Assets/Module-5/repetition-aliasing.mp4 -->
+## 13. Safe iteration and mutation
 
-## 10. List comprehensions
+Removing elements from the same list being iterated can skip values because element positions change.
+
+Unsafe pattern:
+
+```text
+for value in values:
+    if value < 0:
+        values.remove(value)
+```
+
+Safer construction of a new result:
+
+```python
+values = [10, -1, -2, 12]
+accepted = []
+
+for value in values:
+    if value >= 0:
+        accepted.append(value)
+
+assert values == [10, -1, -2, 12]
+assert accepted == [10, 12]
+```
+
+Another valid approach is to iterate over a copy when mutation of the original is required. Constructing a new result is often easier to reason about.
+
+## 14. Technical extension: list comprehensions
 
 A list comprehension constructs a new list from an iterable:
 
+```python
+values = [10, -1, -2, 12]
+accepted = [value for value in values if value >= 0]
+
+assert accepted == [10, 12]
+```
+
+Use a comprehension for one clear transformation or filter. Use an ordinary loop when several state changes or branches need explanation.
+
+## 15. Choosing a tuple or list
+
+Use a tuple when:
+
+- the number and meaning of positions are fixed;
+- element replacement should not occur;
+- a function returns a small fixed group of results.
+
+Use a list when:
+
+- the collection grows or shrinks;
+- elements need replacement;
+- the program processes a variable number of similar values.
+
+Example design:
+
+```python
+shift_name = "Shift A"
+measurements = [128, 121, 135, 130]
+summary = (min(measurements), max(measurements), sum(measurements))
+```
+
+The measurements are a changeable collection. The summary is a fixed three-part result.
+
+## 16. Study case: Shift Output Summary
+
+### 16.1 Requirement
+
+Given a list of shift outputs:
+
+- preserve the original list;
+- produce a sorted copy;
+- calculate minimum, maximum, and total;
+- return the numeric summary and sorted values.
+
+### 16.2 Implementation
+
+```python
+def summarize_shift(output_values):
+    """Return min, max, total, and a sorted copy of output_values."""
+    sorted_output = output_values.copy()
+    sorted_output.sort()
+
+    minimum_output = sorted_output[0]
+    maximum_output = sorted_output[-1]
+    total_output = sum(sorted_output)
+
+    return minimum_output, maximum_output, total_output, sorted_output
+
+
+original_output = [128, 121, 135, 130]
+summary = summarize_shift(original_output)
+
+minimum, maximum, total, sorted_output = summary
+
+assert original_output == [128, 121, 135, 130]
+assert minimum == 121
+assert maximum == 135
+assert total == 514
+assert sorted_output == [121, 128, 130, 135]
+```
+
+Reference relationships:
+
 ```text
-[expression for target in iterable if condition]
+original_output -> original list
+sorted_output   -> new outer list
+summary         -> tuple containing three numbers and sorted_output
 ```
+
+<!-- TODO(media): Add a step-by-step object diagram for the Shift Output Summary, including copy, sort, and tuple return. Suggested path: ../Assets/Module-5/shift-summary-objects.png -->
+
+## 17. Common failure modes
+
+### 17.1 Missing the singleton comma
+
+`(5)` is an integer. `(5,)` is a one-element tuple.
+
+### 17.2 Assigning an in-place method result
+
+`values = values.sort()` binds `values` to `None`. Use `values.sort()` or `values = sorted(values)`.
+
+### 17.3 Assuming assignment copies a list
+
+`second = first` creates another reference to the same object.
+
+### 17.4 Using `is` for value comparison
+
+Use `==` to compare list contents. Identity is a different question.
+
+### 17.5 Assuming a shallow copy duplicates nested lists
+
+A shallow copy creates a new outer container while preserving references to nested objects.
+
+### 17.6 Mutating during iteration
+
+Removing elements from the iterated list can cause elements to be skipped.
+
+### 17.7 Hiding mutation inside a function
+
+Document whether a function changes a supplied list.
+
+## 18. Guided practice
+
+### 18.1 Tuple trace
+
+Predict each result:
 
 ```python
-readings = [3, -2, 7, 0, -1]
-squares = [value * value for value in readings if value >= 0]
-
-print(squares)
-assert squares == [9, 49, 0]
+record = ("A", 120, 4.5)
+name, quantity, hours = record
 ```
 
-The output expression should primarily compute a value. Avoid hidden mutation or I/O inside a comprehension; use a loop when the body performs several stateful operations.
+### 18.2 Alias trace
 
-Nested comprehensions follow nested-loop order but can become unreadable when they combine several conditions.
-
-## 11. Tuples, hashability, and keys
-
-An object is **hashable** when its hash value remains stable and it supports equality consistently. Hashable objects may be dictionary keys or set elements [1].
-
-- a tuple is hashable only if all its elements are hashable;
-- a list is not hashable because it is mutable; and
-- tuple immutability alone does not make a tuple recursively immutable.
+Draw the names and objects after each statement:
 
 ```python
-valid_key = ("course", 204)
-mapping = {valid_key: "Algorithms"}
-
-assert mapping[("course", 204)] == "Algorithms"
-
-invalid_key = ("course", [204])
-try:
-    hash(invalid_key)
-except TypeError as error:
-    print(type(error).__name__)
+first = [10, 20]
+second = first
+second.append(30)
+first = [99]
 ```
 
-Expected output:
+### 18.3 Copy selection
 
-```text
-TypeError
-```
-
-## 12. Function boundaries and ownership
-
-A function receiving a list may:
-
-1. read it without mutation;
-2. mutate it by contract;
-3. make a shallow copy;
-4. make a deep copy; or
-5. construct a transformed result.
-
-Make ownership policy explicit.
+Modify this program so `original` remains unchanged:
 
 ```python
-def without_negatives(values):
-    """Return a new list containing only non-negative values."""
-    return [value for value in values if value >= 0]
-
-
-source = [2, -1, 5]
-result = without_negatives(source)
-
-assert source == [2, -1, 5]
-assert result == [2, 5]
-assert result is not source
+original = [128, 121, 135]
+ordered = original
+ordered.sort()
 ```
 
-A name such as `sort_in_place()` signals mutation better than a generic `process()`.
+## 19. Independent practice
 
-## 13. Selection guidance
+### Exercise 1: Fixed record
 
-Choose a tuple when:
+Represent a production record as `(product_code, quantity, line_name)`, unpack it, and display each field.
 
-- item positions have stable semantic roles;
-- the collection itself should not grow or shrink;
-- unpacking is part of the interface; or
-- a hashable composite key is required and all elements are hashable.
+### Exercise 2: Independent revision
 
-Choose a list when:
+Write a function that returns a copy of a list with one corrected measurement. The source list must remain unchanged.
 
-- the collection grows, shrinks, or reorders;
-- homogeneous repeated items are processed as a sequence;
-- slice assignment or in-place operations are required; or
-- a comprehension naturally produces the result.
+### Exercise 3: Summary tuple
 
-Tuple use does not automatically guarantee deep immutability, validation, named fields, or domain invariants.
+Return minimum, maximum, and total as a tuple for a non-empty list of numbers.
 
-## 14. Common failure modes
+### Exercise 4: Mutation audit
 
-### 14.1 Missing singleton comma
+For five list operations, identify whether each operation mutates the list or returns a new object.
 
-`(value)` is grouping; `(value,)` is a tuple.
+## 20. Knowledge check
 
-### 14.2 Assigning an in-place result
-
-`items = items.sort()` replaces the name with `None`.
-
-### 14.3 Assuming slicing is deep
-
-`nested[:]` copies only the outer list.
-
-### 14.4 Repeating a mutable item
-
-`[mutable] * n` creates `n` references to one object.
-
-### 14.5 Mutating caller-owned data silently
-
-State mutation in the function contract or return a new structure.
-
-### 14.6 Using equality to test aliasing
-
-Equal lists can be distinct objects. Use `is` only when identity is the question.
-
-### 14.7 Deep-copying without a semantic reason
-
-Deep copying may duplicate excessive state or violate resource identity.
-
-## 15. Guided practice
-
-### 15.1 Object graph
-
-Draw names and objects after:
-
-```python
-from copy import deepcopy
-
-a = [[1], [2]]
-b = a
-c = a.copy()
-d = deepcopy(a)
-```
-
-Mark each true identity relationship between outer and inner lists.
-
-### 15.2 Unpacking trace
-
-Predict values:
-
-```python
-head, *body, tail = range(6)
-```
-
-### 15.3 Mutation policy
-
-Review a function that calls `values.sort()`. Write two alternative contracts: one for in-place sorting and one for returning an independent sorted list.
-
-## 16. Independent practice
-
-### Exercise 1 — Matrix initialization
-
-Create a `3 × 4` matrix of independent zeros. Set position `[0][0]` to `1`.
-
-**Success criteria:** only one cell changes, and inner row identities are distinct.
-
-### Exercise 2 — Shallow versus deep
-
-Construct a nested list containing two shared references to the same inner list. Apply `copy()` and `deepcopy()`.
-
-**Deliverable:** identity assertions explaining which sharing relationships remain.
-
-### Exercise 3 — Immutable record
-
-Represent a course record as a tuple containing code, title, and credits. Unpack it and use it as a dictionary key.
-
-**Constraint:** every element must be hashable.
-
-### Exercise 4 — Pure transformation
-
-Implement `normalized_rows(rows)` that returns a new nested list with each numeric row divided by its sum.
-
-**Requirements:** reject zero-sum rows with `ValueError` and do not mutate any input row.
-
-## 17. Knowledge check
-
-1. What syntactic element creates a one-item tuple?
-2. What does a list slice copy?
-3. How do equality and identity differ?
-4. Why does `[[]] * 3` create coupled rows?
-5. What remains shared after a shallow copy?
-6. When is a tuple hashable?
-7. Why do mutating list methods normally return `None`?
-8. When is a deep copy inappropriate?
+1. What operations do lists and tuples share?
+2. Why does `(5,)` require a comma?
+3. What is tuple unpacking?
+4. What is the difference between mutation and rebinding?
+5. What is an alias?
+6. How do `==` and `is` differ?
+7. Name three ways to make a shallow list copy.
+8. Why can a shallow copy still share nested lists?
+9. Why does `values.sort()` return `None`?
+10. Why is removing elements during direct iteration risky?
 
 <details>
 <summary>Answer key</summary>
 
-1. A trailing comma.
-2. The outer sequence and its selected references; nested objects are reused.
-3. Equality compares values; identity asks whether references reach the same object.
-4. Repetition duplicates the one inner-list reference.
-5. Nested referenced objects.
-6. When every contained element is hashable.
-7. Their purpose is an in-place state change; returning `None` prevents confusion with a new collection.
-8. When identity sharing is required, resources are not duplicable, or recursive duplication is unnecessarily expensive.
+1. Both support ordered access, indexing, slicing, iteration, membership, concatenation, and length.
+2. The comma defines the tuple; parentheses alone only group an expression.
+3. It assigns sequence elements to separate target names.
+4. Mutation changes an object. Rebinding changes which object a name refers to.
+5. It is another reference to the same object.
+6. `==` compares values. `is` compares object identity.
+7. `values.copy()`, `values[:]`, and `list(values)`.
+8. Only the outer list is new; nested object references are reused.
+9. It changes the existing list, and the `None` return discourages confusion with a new list.
+10. Removing an element changes later positions while the loop continues its traversal.
 
 </details>
 
-## 18. Module synthesis
+## 21. Module synthesis
 
-Analyse sequence operations with an object graph:
+Use this reasoning sequence:
 
 ```text
-names
-    -> outer container identities
-    -> contained references
-    -> nested mutable objects
+choose the sequence type
+    -> identify allowed mutations
+    -> identify possible aliases
+    -> choose shared or independent state
+    -> test the original and result after each operation
 ```
 
-Assignment adds a binding. Slicing and `copy()` create a shallow outer object. `deepcopy()` recursively constructs a new graph according to copy semantics. Select tuple or list from the mutation contract, then make ownership visible at every function boundary.
+The key question is not only what values a collection contains. Also ask which names refer to the same object and which operations modify that object.
 
 ## References
 
-1. Python Software Foundation. “Sequence Types — `list`, `tuple`, `range`.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range
-2. Python Software Foundation. “Data Structures.” *The Python Tutorial*. Accessed 31 August 2026. https://docs.python.org/3/tutorial/datastructures.html
-3. Python Software Foundation. “Data Model: Objects, Values and Types.” *Python Language Reference*. Accessed 31 August 2026. https://docs.python.org/3/reference/datamodel.html#objects-values-and-types
-4. Python Software Foundation. “`copy` — Shallow and Deep Copy Operations.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/copy.html
+1. Python Software Foundation. "Data Structures." *The Python Tutorial*, Python 3.14.7 documentation. Accessed 25 September 2026. https://docs.python.org/3/tutorial/datastructures.html
+2. Python Software Foundation. "Data Model: Objects, Values and Types." *Python Language Reference*, Python 3 documentation. Accessed 25 September 2026. https://docs.python.org/3/reference/datamodel.html
+3. Bell, Ana. "Lecture 5: Tuples, Lists, Aliasing, Mutability, and Cloning." *MIT OpenCourseWare 6.0001: Introduction to Computer Science and Programming in Python*, Fall 2016. Accessed 25 September 2026. https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/resources/lecture-5-tuples-lists-aliasing-mutability-and-cloning/
 
 ---
 
-**Previous module:** Module 4 — Decomposition, Abstraction, and Functions  
-**Next module:** Module 6 — Recursion and Dictionaries
+**Previous module:** Module 4: Decomposition, Abstraction, and Functions
+
+**Next module:** Module 6: Dictionaries and Recursion
