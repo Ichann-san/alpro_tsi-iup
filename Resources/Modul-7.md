@@ -1,632 +1,329 @@
-# Module 7 — Testing, Debugging, and Exceptions
+# Week 10: Testing, Debugging, Exceptions, and Assertions
 
-> **Course:** Algorithms and Programming  
-> **Programming language:** Python  
-> **Supported runtime:** Python 3.10 or later  
-> **Resource type:** Technical learning module  
-> **Practical notebook:** Deferred to `../Practice/Modul_7.ipynb`  
-> **Estimated study time:** 4 hours
+**Course:** Algorithms and Programming
 
-## 1. Module scope
+**Program:** TSI International Undergraduate Program
 
-Testing supplies evidence that software satisfies specified behaviour for selected cases. Debugging localizes and explains an observed failure. Exceptions provide structured propagation of abnormal conditions. These activities are related but not interchangeable:
+**Repository module:** Module 7
 
-- a test detects a mismatch;
-- debugging identifies its cause; and
-- exception handling defines runtime failure semantics.
+**Environment:** Python 3.10 or later, with no additional packages
 
-This module covers test design, assertions, `unittest`, tracebacks, controlled debugging, exception hierarchies, cleanup, propagation, chaining, and custom exceptions.
+**Prerequisites:** Variables, conditions, loops, lists, dictionaries, and functions
 
-<!-- TODO(media): Add an animation of the failure lifecycle: test input, assertion failure, traceback inspection, debugger state, root-cause correction, and regression test. Suggested path: ../Assets/Module-7/failure-lifecycle.mp4 -->
+**Practical notebook:** [Week 10 practicum](../Practice/Modul_7.ipynb)
 
-## 2. Learning outcomes
+## 1. What you will learn
 
-After completing this module, a student should be able to:
+This week focuses on four questions:
 
-1. **Derive** test cases from a function contract and input partitions.
-2. **Write** deterministic unit tests with setup, action, and assertions.
-3. **Distinguish** test assertions from production input validation.
-4. **Read** a traceback from exception type backward through call frames.
-5. **Use** breakpoints, stepping, state inspection, and call-stack navigation.
-6. **Handle** only exceptions that a layer can resolve or translate.
-7. **Apply** `try`, `except`, `else`, `finally`, `raise`, and exception chaining.
-8. **Design** a small domain-specific exception hierarchy.
-9. **Prevent** swallowed failures, overbroad handlers, and cleanup defects.
-
-## 3. Verification vocabulary
-
-| Term | Meaning |
+| Subject | Question |
 | --- | --- |
-| Test case | Inputs, execution conditions, and expected observations |
-| Test oracle | Rule that determines the expected result |
-| Unit test | Test of a small component in controlled isolation |
-| Integration test | Test of interactions between components or systems |
-| Regression test | Test retained to prevent recurrence of a defect |
-| Fixture | Controlled state established for a test |
-| Failure | Observed result does not meet expectation |
-| Error | Underlying defect or invalid state that may cause failure |
-| Coverage | Structural measurement of code exercised by tests |
+| Testing | Does the program produce the expected result? |
+| Debugging | Why does the program produce an incorrect result? |
+| Exceptions | How should the program respond when an operation fails? |
+| Assertions | How can a program automatically check an expected condition? |
 
-Coverage is not proof of correctness. A line can execute without its result being asserted, and unrepresented input classes can remain defective.
+After this lesson, you should be able to choose simple test cases, fix a small logic error, handle invalid numeric text, raise `ValueError`, and check results with `assert`.
 
-## 4. Designing tests from contracts
+<!-- TODO(media): Add an animation showing input, expected output, observed failure, correction, and a passing test. Suggested path: ../Assets/Module-7/testing-debugging-cycle.mp4 -->
 
-Given:
+## 2. Testing: compare actual and expected results
+
+A test case contains input and an expected result. Calculate the expected result independently before running the program.
+
+Example requirement: production meets its target when actual output is greater than or equal to the target.
 
 ```python
-def clamp(value, minimum, maximum):
-    if minimum > maximum:
-        raise ValueError("minimum cannot exceed maximum")
-    return min(max(value, minimum), maximum)
+def meets_target(actual, target):
+    return actual >= target
+
+
+print(meets_target(120, 100))
+print(meets_target(99, 100))
+print(meets_target(100, 100))
 ```
 
-Derive partitions:
+Expected output:
 
-| Partition | Representative input | Expected result |
+```text
+True
+False
+True
+```
+
+Choose cases that exercise different decisions:
+
+| Case | Input: actual, target | Expected |
 | --- | --- | --- |
-| Below range | `clamp(-2, 0, 10)` | `0` |
-| At lower boundary | `clamp(0, 0, 10)` | `0` |
-| Interior | `clamp(4, 0, 10)` | `4` |
-| At upper boundary | `clamp(10, 0, 10)` | `10` |
-| Above range | `clamp(12, 0, 10)` | `10` |
-| Invalid bounds | `clamp(4, 10, 0)` | `ValueError` |
+| Above target | `120, 100` | `True` |
+| Just below target | `99, 100` | `False` |
+| Exactly at target | `100, 100` | `True` |
+| Zero output | `0, 100` | `False` |
 
-### 4.1 Selection techniques
+The equality case detects the difference between `>` and `>=`. One successful case does not prove that a function works for every input.
 
-- **Equivalence partitioning:** choose representatives expected to behave alike.
-- **Boundary analysis:** test at, immediately below, and immediately above boundaries.
-- **Decision-table testing:** cover meaningful combinations of conditions and actions.
-- **State-transition testing:** exercise valid and invalid transitions.
-- **Invariant testing:** assert properties that must hold across many cases.
+## 3. Assertions: automate a check
 
-### 4.2 Arrange, act, assert
-
-```python
-# Arrange
-values = [3, 1, 2]
-
-# Act
-result = sorted(values)
-
-# Assert
-assert result == [1, 2, 3]
-assert values == [3, 1, 2]
-```
-
-Keep the decisive behaviour visible. A test that reproduces the implementation line by line may repeat the same defect in its oracle.
-
-## 5. Plain assertions
-
-`assert condition, message` raises `AssertionError` when the condition is false.
-
-Use assertions for:
-
-- internal invariants;
-- developer assumptions;
-- examples and focused checks; and
-- impossible states after validated boundaries.
-
-Do not use assertions as the only validation for untrusted input. Python can remove assert statements when optimization is enabled.
-
-```python
-def midpoint(low, high):
-    assert low <= high, "low must not exceed high"
-    return low + (high - low) // 2
-
-
-assert midpoint(2, 8) == 5
-```
-
-For a public API precondition, an explicit exception is normally clearer.
-
-## 6. Unit testing with `unittest`
-
-The standard-library `unittest` framework organizes tests as methods and supplies assertion APIs, fixtures, suites, and runners [1].
-
-```python
-import io
-import unittest
-
-
-def normalize_code(value):
-    cleaned = value.strip().upper()
-    if not cleaned:
-        raise ValueError("code cannot be empty")
-    return cleaned
-
-
-class NormalizeCodeTests(unittest.TestCase):
-    def test_trims_and_uppercases(self):
-        self.assertEqual(normalize_code(" cs204 "), "CS204")
-
-    def test_rejects_whitespace_only(self):
-        with self.assertRaises(ValueError):
-            normalize_code("   ")
-
-
-suite = unittest.defaultTestLoader.loadTestsFromTestCase(NormalizeCodeTests)
-stream = io.StringIO()
-result = unittest.TextTestRunner(stream=stream, verbosity=0).run(suite)
-
-assert result.wasSuccessful(), stream.getvalue()
-assert result.testsRun == 2
-```
-
-Common assertions:
-
-| Assertion | Contract |
-| --- | --- |
-| `assertEqual(a, b)` | Values compare equal |
-| `assertIs(a, b)` | Same object identity |
-| `assertIsNone(value)` | Value is `None` |
-| `assertTrue(condition)` | Condition is truthy |
-| `assertIn(item, container)` | Membership holds |
-| `assertRaises(Error)` | Block raises expected exception |
-| `assertAlmostEqual(a, b)` | Numeric values agree to configured precision |
-
-Prefer a specific assertion because its failure report contains more diagnostic information.
-
-### 6.1 Test isolation
-
-A unit test should not depend on:
-
-- execution order;
-- prior test mutations;
-- uncontrolled clock time or randomness;
-- the developer's current directory; or
-- external network state unless explicitly an integration test.
-
-Use `setUp()` and `tearDown()` for per-test fixtures only when direct local setup would be repetitive.
-
-## 7. Test quality
-
-### 7.1 Determinism
-
-The same controlled state should produce the same result. Seed pseudo-random generators when randomness itself is not under test.
-
-### 7.2 Focus
-
-One test may contain several assertions about one behaviour. A test covering several unrelated behaviours produces ambiguous failures.
-
-### 7.3 Failure messages
-
-Test names and assertion diagnostics should identify the violated contract, not generic labels such as `test_1`.
-
-### 7.4 Negative paths
-
-Test invalid types, empty values, missing keys, and violated preconditions that the contract explicitly addresses.
-
-### 7.5 Regression value
-
-When a defect is found:
-
-1. reproduce it with the smallest realistic input;
-2. convert that reproduction into a failing test;
-3. correct the narrow responsible layer; and
-4. retain the test.
-
-## 8. Exception model
-
-An exception is an object representing abnormal control flow. Raising an exception stops ordinary execution of the current suite and searches outward for a compatible handler [2].
-
-```python
-def parse_positive_integer(text):
-    value = int(text)
-    if value <= 0:
-        raise ValueError("value must be positive")
-    return value
-
-
-assert parse_positive_integer("12") == 12
-
-for invalid in ("0", "-2", "abc"):
-    try:
-        parse_positive_integer(invalid)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError(f"expected ValueError for {invalid!r}")
-```
-
-`int("abc")` and the explicit domain check both produce `ValueError`, but for different reasons. A public contract may translate lower-level parsing details into a domain exception.
-
-## 9. `try` statement structure
+An assertion checks a condition:
 
 ```text
-try:
-    risky_operation()
-except SpecificError:
-    recover()
-else:
-    use_success_result()
-finally:
-    release_resource()
+assert condition, "message shown if the condition is false"
 ```
 
-This is schematic and intentionally tagged as text rather than executable code.
+A true condition allows execution to continue. A false condition raises `AssertionError` [2].
 
-### 9.1 `except`
-
-Runs when a compatible exception escapes the `try` suite.
-
-### 9.2 `else`
-
-Runs only when the `try` suite completes without exception. Put success-path work here so exceptions from that work are not accidentally caught by handlers intended for the risky operation [2].
-
-### 9.3 `finally`
-
-Runs whether execution succeeds, raises, returns, or breaks. It is appropriate for mandatory cleanup. A context manager is usually clearer for resources that support `with`.
+Replace repeated manual inspection with checks:
 
 ```python
-events = []
+assert meets_target(120, 100) is True
+assert meets_target(99, 100) is False
+assert meets_target(100, 100) is True, "Output equal to target must pass."
+assert meets_target(0, 100) is False
+
+print("All target checks passed.")
+```
+
+Expected output:
+
+```text
+All target checks passed.
+```
+
+When an assertion fails, read its message and inspect the function and test expectation. Correct the cause before running later checks.
+
+Use assertions for developer checks and test expectations. Required input validation should use an explicit condition and `raise`: Python can disable assertions when started with the `-O` option [2].
+
+## 4. Recognizing errors
+
+| Category | Example | Observation |
+| --- | --- | --- |
+| Syntax error | Missing `:` after an `if` condition | Python cannot parse the code |
+| Runtime exception | `int("many")` | Execution raises an exception |
+| Logic error | Using `>` when the requirement says `>=` | Code runs but returns the wrong result |
+
+For a runtime failure, read the last line of the traceback first. It identifies the exception type and message. Then inspect the referenced line in your code [1].
+
+Illustrative traceback:
+
+```text
+Traceback (most recent call last):
+  File "example.py", line 1, in <module>
+    quantity = int("many")
+ValueError: invalid literal for int() with base 10: 'many'
+```
+
+The failing operation is numeric conversion. The actual input is text that does not represent an integer.
+
+## 5. Debugging: reproduce, inspect, correct, retest
+
+Use this sequence:
+
+1. Find a small input that reproduces the problem.
+2. Write down the expected result.
+3. Inspect relevant variables with `print()`.
+4. Correct the statement that causes the mismatch.
+5. Run the original test and additional cases.
+
+This function contains a deliberate logic error:
+
+```python
+def total_output_buggy(values):
+    total = 0
+
+    for index in range(len(values) - 1):
+        print(f"index={index}, value={values[index]}")
+        total += values[index]
+
+    return total
+
+
+observed = total_output_buggy([10, 8, 12])
+print(f"Observed: {observed}; expected: 30")
+```
+
+Expected output from the buggy example:
+
+```text
+index=0, value=10
+index=1, value=8
+Observed: 18; expected: 30
+```
+
+The loop never visits the final element. A direct loop over the values removes the incorrect index boundary:
+
+```python
+def total_output(values):
+    total = 0
+
+    for value in values:
+        total += value
+
+    return total
+
+
+assert total_output([10, 8, 12]) == 30
+assert total_output([7]) == 7
+assert total_output([]) == 0
+```
+
+Keep these checks after the correction. A retained check for a previous bug is a **regression test**.
+
+<!-- TODO(media): Add a walkthrough highlighting the skipped final element, print-based inspection, and the corrected loop. Suggested path: ../Assets/Module-7/skipped-element-debugging.gif -->
+
+## 6. Exceptions: handle an expected failure
+
+An exception interrupts normal execution. A matching `except` block can handle it [1].
+
+Common examples:
+
+| Exception | Example cause |
+| --- | --- |
+| `ValueError` | `int("many")` |
+| `ZeroDivisionError` | `10 / 0` |
+| `IndexError` | Reading position 3 from a three-item list |
+| `KeyError` | Reading a missing dictionary key |
+| `TypeError` | Adding a string and an integer |
+
+Start with one risky operation and one specific handler:
+
+```python
+raw_quantity = "many"
 
 try:
-    events.append("try")
-    value = int("42")
+    quantity = int(raw_quantity)
+    print(f"Recorded: {quantity}")
 except ValueError:
-    events.append("except")
-else:
-    events.append(f"else:{value}")
-finally:
-    events.append("finally")
-
-print(events)
-assert events == ["try", "else:42", "finally"]
+    print("Quantity must be an integer.")
 ```
 
-<!-- TODO(media): Add a control-flow animation for try/except/else/finally across success and failure paths. Suggested path: ../Assets/Module-7/exception-flow.gif -->
-
-## 10. Catch at the responsible boundary
-
-Catch an exception only when the current layer can:
-
-- recover with a valid alternative;
-- add meaningful context;
-- translate it into a domain-level failure;
-- retry under a defined policy; or
-- perform logging before re-raising.
-
-Do not catch an exception merely to continue with invalid state.
-
-Narrow the `try` suite and catch specific types:
-
-```python
-def ratio_from_text(numerator_text, denominator_text):
-    try:
-        numerator = float(numerator_text)
-        denominator = float(denominator_text)
-    except ValueError as error:
-        raise ValueError("inputs must be numeric") from error
-
-    if denominator == 0:
-        raise ZeroDivisionError("denominator cannot be zero")
-
-    return numerator / denominator
-
-
-assert ratio_from_text("6", "3") == 2.0
-```
-
-Avoid `except Exception: pass`. It suppresses evidence, may leave partial state, and prevents upstream policy from running.
-
-## 11. Raising and chaining
-
-`raise` creates or re-raises an exception [2].
-
-Explicit chaining:
-
-```python
-class ConfigurationError(Exception):
-    """Raised when application configuration is invalid."""
-
-
-def read_port(configuration):
-    try:
-        raw_port = configuration["port"]
-    except KeyError as error:
-        raise ConfigurationError("missing required setting: port") from error
-
-    try:
-        port = int(raw_port)
-    except (TypeError, ValueError) as error:
-        raise ConfigurationError("port must be an integer") from error
-
-    if not 1 <= port <= 65535:
-        raise ConfigurationError("port must be between 1 and 65535")
-    return port
-
-
-assert read_port({"port": "8080"}) == 8080
-
-try:
-    read_port({})
-except ConfigurationError as error:
-    assert isinstance(error.__cause__, KeyError)
-```
-
-`raise NewError(...) from original` preserves causal evidence. Use `from None` only when suppressing the original context is an intentional interface decision.
-
-## 12. Custom exception hierarchies
-
-Custom exceptions make domain failures catchable without parsing message text.
-
-```python
-class EnrollmentError(Exception):
-    """Base class for enrollment failures."""
-
-
-class CapacityExceededError(EnrollmentError):
-    """Raised when a course has no available capacity."""
-
-
-class PrerequisiteError(EnrollmentError):
-    """Raised when required study has not been completed."""
-
-
-def enroll(*, seats_remaining, prerequisite_met):
-    if seats_remaining <= 0:
-        raise CapacityExceededError("course is full")
-    if not prerequisite_met:
-        raise PrerequisiteError("prerequisite not satisfied")
-    return "enrolled"
-
-
-assert enroll(seats_remaining=1, prerequisite_met=True) == "enrolled"
-
-try:
-    enroll(seats_remaining=0, prerequisite_met=True)
-except EnrollmentError as error:
-    assert isinstance(error, CapacityExceededError)
-```
-
-Inherit application exceptions from `Exception`, not `BaseException`. The latter also covers interpreter-exit signals such as `KeyboardInterrupt` and `SystemExit`.
-
-## 13. Traceback analysis
-
-A traceback records the stack of active calls associated with an exception [3].
-
-Read it in two directions:
-
-1. **Bottom line:** exception type and message.
-2. **Frames from bottom upward:** immediate failing operation, caller state, and propagation path.
-
-Diagnostic questions:
-
-- Which expression raised?
-- Which actual values reached that expression?
-- Which earlier assumption allowed the invalid state?
-- Is the observed frame the root cause or only the detection point?
-
-`traceback` utilities can format or inspect traceback information programmatically [3]. Do not expose full internal tracebacks to untrusted end users; they may reveal paths, configuration, or implementation details.
-
-## 14. Systematic debugging
-
-Use an evidence loop:
+Expected output:
 
 ```text
-reproduce
-    -> minimize
-    -> observe
-    -> form one falsifiable hypothesis
-    -> run a discriminating check
-    -> correct cause
-    -> run regression tests
+Quantity must be an integer.
 ```
 
-### 14.1 Minimize
+If conversion succeeds, the handler is skipped. If conversion raises `ValueError`, the remaining statements inside `try` are skipped and the handler runs.
 
-Remove irrelevant input and dependencies until the failure remains in the smallest useful case.
+Catch an exception you expect and can respond to. An empty handler or a broad `except:` can hide a programming mistake.
 
-### 14.2 Observe state
+## 7. Raising an exception for an invalid value
 
-Inspect values, types, identities, lengths, branch conditions, and call paths. Prefer targeted observations to large unstructured logs.
+Conversion alone does not check every rule. For example, `int("-3")` succeeds, but a production quantity must not be negative.
 
-### 14.3 Change one variable
-
-A debugging experiment should separate competing hypotheses. Multiple simultaneous code changes destroy causal evidence.
-
-### 14.4 Verify the correction
-
-Run:
-
-- the new regression test;
-- nearby unit tests;
-- invalid-input tests; and
-- an appropriate broader gate.
-
-## 15. Debugging with `pdb`
-
-Python's debugger supports breakpoints, stepping, stack inspection, and expression evaluation [4].
-
-Start at a location:
-
-```text
-breakpoint()
-```
-
-Or run a script:
-
-```console
-python -m pdb program.py
-```
-
-Core commands:
-
-| Command | Action |
-| --- | --- |
-| `l` | List source |
-| `n` | Execute next line in current frame |
-| `s` | Step into a call |
-| `r` | Continue until current function returns |
-| `c` | Continue execution |
-| `p expression` | Evaluate and display expression |
-| `pp expression` | Pretty-print expression |
-| `w` | Show stack trace |
-| `u` / `d` | Move up or down the stack |
-| `b location` | Set breakpoint |
-| `q` | Quit debugger |
-
-Do not leave unconditional `breakpoint()` calls in submitted production paths.
-
-<!-- TODO(media): Add a terminal recording of pdb reproducing an off-by-one error, moving through frames, inspecting values, and confirming the corrected state. Suggested path: ../Assets/Module-7/pdb-session.mp4 -->
-
-## 16. Resource cleanup
-
-Use context managers for files and other resources:
+Use `raise` to reject an invalid value:
 
 ```python
-from io import StringIO
+def parse_quantity(text):
+    """Return a non-negative integer or raise ValueError."""
+    quantity = int(text)
 
-buffer = StringIO("alpha\nbeta\n")
+    if quantity < 0:
+        raise ValueError("Quantity cannot be negative.")
 
-with buffer as stream:
-    lines = [line.strip() for line in stream]
+    return quantity
 
-assert lines == ["alpha", "beta"]
-assert buffer.closed
-```
 
-`with` expresses acquisition and release as one structured region. `finally` remains appropriate when no suitable context manager exists or several cleanup actions must be coordinated.
+assert parse_quantity("12") == 12
+assert parse_quantity(" 0 ") == 0
 
-## 17. Common failure modes
-
-### 17.1 Tests without an oracle
-
-Executing code and observing no crash is not enough when a result contract exists.
-
-### 17.2 Testing implementation details
-
-Tests coupled to private intermediate steps fail during safe refactoring. Assert externally meaningful behaviour unless an internal invariant itself is the target.
-
-### 17.3 Floating-point exact equality
-
-Use tolerance-aware comparison when rounding is part of the numeric model.
-
-### 17.4 Broad exception handling
-
-Catch the narrow types a layer can resolve. Unexpected exceptions should remain visible.
-
-### 17.5 Empty handler
-
-`except ...: pass` destroys evidence and often permits corrupt continuation.
-
-### 17.6 Oversized `try` suite
-
-Unrelated operations can raise the same exception type and be misclassified.
-
-### 17.7 Returning from `finally`
-
-A `return` in `finally` can suppress an active exception or earlier return. Avoid it.
-
-### 17.8 Debugging by random edits
-
-Without a hypothesis and discriminating observation, a disappearing symptom does not prove the cause is fixed.
-
-## 18. Guided practice
-
-### 18.1 Test matrix
-
-Produce partitions and boundary tests for:
-
-```python
-def valid_percentage(value):
-    return 0 <= value <= 100
-```
-
-### 18.2 Traceback reading
-
-Create a three-function call chain whose final function indexes an empty list. Identify detection point, propagation path, and correct validation boundary.
-
-### 18.3 Handler audit
-
-Rewrite:
-
-```text
 try:
-    result = complex_operation()
-except Exception:
-    result = None
+    parse_quantity("-3")
+except ValueError as error:
+    print(error)
 ```
 
-State the recoverable exception, fallback semantics, and logging or propagation policy.
+Expected output:
 
-## 19. Independent practice
+```text
+Quantity cannot be negative.
+```
 
-### Exercise 1 — Contract-based unit tests
+The function raises `ValueError` for invalid numeric text or a negative integer. The caller decides how to respond.
 
-Write `unittest` cases for a median function.
+To test an expected exception, record whether the handler runs:
 
-**Required partitions:** odd length, even length, one item, duplicates, negative values, and empty-input exception.
+```python
+error_detected = False
 
-### Exercise 2 — Domain translation
+try:
+    parse_quantity("many")
+except ValueError:
+    error_detected = True
 
-Implement `parse_student_id(text)` and a `StudentIdError`.
+assert error_detected, "Invalid quantity text must raise ValueError."
+```
 
-**Requirements:** preserve the original `ValueError` as `__cause__` when numeric conversion fails.
+## 8. Study case: reading production quantities
 
-### Exercise 3 — Debugging report
+A daily log contains text values. Accept non-negative integer quantities, skip invalid records, and calculate the total.
 
-Diagnose an off-by-one defect using:
+Use `parse_quantity` from Section 7:
 
-1. minimal reproduction;
-2. observed state;
-3. ranked hypothesis;
-4. debugger or trace evidence;
-5. correction; and
-6. regression test.
+```python
+raw_quantities = ["12", "8", "many", "-3", "0"]
+accepted_quantities = []
+rejected_count = 0
 
-### Exercise 4 — Cleanup proof
+for text in raw_quantities:
+    try:
+        quantity = parse_quantity(text)
+    except ValueError:
+        rejected_count += 1
+        continue
 
-Read data from a file-like object with `with`. Cause a deliberate parsing exception and prove the resource is closed afterward.
+    accepted_quantities.append(quantity)
 
-## 20. Knowledge check
+total_units = sum(accepted_quantities)
+
+assert accepted_quantities == [12, 8, 0]
+assert rejected_count == 2
+assert total_units == 20
+
+print(f"Total units: {total_units}")
+print(f"Rejected records: {rejected_count}")
+```
+
+Expected output:
+
+```text
+Total units: 20
+Rejected records: 2
+```
+
+The exception handler makes the invalid-record policy explicit. The assertions check whether the result follows that policy.
+
+<!-- TODO(media): Add a flow animation of five quantity records, showing accepted values, rejected values, and the running total. Suggested path: ../Assets/Module-7/production-log-validation.mp4 -->
+
+## 9. Practicum
+
+Open [Modul_7.ipynb](../Practice/Modul_7.ipynb) and complete:
+
+1. tests for a target-checking function;
+2. a correction to a loop that skips the last item;
+3. quantity validation with `raise ValueError`;
+4. a Daily Production Checker that handles invalid records and reports totals.
+
+Replace the marked starter code and keep the validation cells unchanged. Complete solutions are maintained separately for the instructor.
+
+## 10. Knowledge check
+
+Answer in your own words:
 
 1. How do testing and debugging differ?
-2. What is a test oracle?
-3. Why is code coverage not proof of correctness?
-4. When should assertions not be used as the only validation?
-5. What is the purpose of `else` on a `try` statement?
-6. When should an exception be caught?
-7. What does explicit exception chaining preserve?
-8. Why should the smallest failing example be retained as a regression test?
-
-<details>
-<summary>Answer key</summary>
-
-1. Testing detects contract mismatches for selected cases; debugging finds the cause of an observed mismatch.
-2. A rule or source that determines the expected result.
-3. Execution does not prove meaningful output was asserted or all input classes were represented.
-4. For external or untrusted input and any requirement that must remain active under optimized execution.
-5. It isolates success-path work from the code whose specific exceptions are handled.
-6. When the current layer can recover, translate, enrich, retry, or perform necessary reporting before re-raising.
-7. The causal relationship and original traceback.
-8. It supplies direct evidence that the correction remains effective.
-
-</details>
-
-## 21. Module synthesis
-
-Quality loop:
-
-```text
-contract
-    -> representative and boundary tests
-    -> observed failure
-    -> traceback and state evidence
-    -> root-cause correction
-    -> regression verification
-```
-
-Exceptions are part of interface design. Handle them at the layer that owns recovery policy, preserve causal evidence, and keep cleanup independent from success.
+2. Why should a target test include a value exactly equal to the target?
+3. What happens when an assertion condition is false?
+4. Why does `int("-3")` need a separate production-quantity check?
+5. Which exception handles `int("many")`?
+6. Why is `raise ValueError` suitable for required input validation?
+7. Which tests would reveal a loop that skips the last item?
 
 ## References
 
-1. Python Software Foundation. “`unittest` — Unit Testing Framework.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/unittest.html
-2. Python Software Foundation. “Errors and Exceptions.” *The Python Tutorial*. Accessed 31 August 2026. https://docs.python.org/3/tutorial/errors.html
-3. Python Software Foundation. “`traceback` — Print or Retrieve a Stack Traceback.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/traceback.html
-4. Python Software Foundation. “`pdb` — The Python Debugger.” *Python 3 Documentation*. Accessed 31 August 2026. https://docs.python.org/3/library/pdb.html
+1. Python Software Foundation. "Errors and Exceptions." *The Python Tutorial*. Accessed 3 November 2026. https://docs.python.org/3.10/tutorial/errors.html
+2. Python Software Foundation. "The assert statement." *Python Language Reference*. Accessed 3 November 2026. https://docs.python.org/3.10/reference/simple_stmts.html#the-assert-statement
 
 ---
 
-**Previous module:** Module 6 — Recursion and Dictionaries  
-**Next module:** Module 8 — Object-Oriented Programming
+**Previous module:** [Module 6: Dictionaries and Recursion](Modul-6.md)
+
+**Next module:** [Module 8: Object-Oriented Programming](Modul-8.md)
